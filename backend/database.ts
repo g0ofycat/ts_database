@@ -1,25 +1,47 @@
 import fs from "fs";
 import path from "path";
+import dotenv from "dotenv";
 
 import { DataIndex, LogRecord } from "./types/database_types";
+
+// ============ INIT ============
+
+dotenv.config();
+
+// ============ database.ts ============
 
 export class Database {
   // ============ PRIVATE DATA ============
 
   private storage: DataIndex[] = [];
+
   private index: Map<number, DataIndex> = new Map();
   private timeout_data: Map<number, NodeJS.Timeout> = new Map();
+
+  private data_map: Map<string, Map<any, Set<number>>> = new Map();
+  private metadata_map: Map<string, Map<any, Set<number>>> = new Map();
+
   private filePath: string;
+
   private current_id = 0;
   private file_size_limit = 0;
 
   // ============ CONSTRUCTOR ============
 
   /// @brief Constructor for Database
-  /// @param filename: Name of the file to save the data to
+  /// @param api_key: The API key
+  /// @param filePath: Name of the file to save the data to
   /// @param file_size_limit: The size of each file in bytes before creating a new one
-  constructor(filename = "database_data.json", file_size_limit = 10000) {
-    this.filePath = path.resolve(filename);
+  constructor(
+    api_key: string,
+    filePath = "database_data.json",
+    file_size_limit = 10000
+  ) {
+    if (api_key !== process.env.DATABASE_API_KEY) {
+      throw new Error("Invalid API key");
+    }
+
+    this.filePath = path.resolve(filePath);
     this.file_size_limit = file_size_limit;
 
     this.load_async().catch((err) => console.error("Error loading data:", err));
@@ -84,14 +106,40 @@ export class Database {
         this.storage.push(log.data);
         this.index.set(log.data.id, log.data);
         this.current_id = Math.max(this.current_id, log.data.id + 1);
+
+        this.indexFields(this.data_map, log.data, ["metadata"], true);
+        this.indexFields(this.metadata_map, log.data.metadata ?? {}, [], true);
+
         break;
+
       case "update":
         const record = this.index.get(log.id);
-        if (record) Object.assign(record, log.changes);
+
+        if (record) {
+          this.removeIndex(this.data_map, record, ["metadata"]);
+          if (record.metadata)
+            this.removeIndex(this.metadata_map, record.metadata, []);
+          Object.assign(record, log.changes);
+          this.indexFields(this.data_map, record, ["metadata"], true);
+          if (record.metadata)
+            this.indexFields(this.metadata_map, record.metadata, [], true);
+        }
+
         break;
+
       case "delete":
+        const toDelete = this.index.get(log.id);
+
+        if (toDelete) {
+          this.removeIndex(this.data_map, toDelete, ["metadata"]);
+
+          if (toDelete.metadata)
+            this.removeIndex(this.metadata_map, toDelete.metadata, []);
+        }
+
         this.index.delete(log.id);
         this.storage = this.storage.filter((r) => r.id !== log.id);
+
         break;
     }
   }
@@ -147,6 +195,49 @@ export class Database {
     }
   }
 
+  // ============ INDEXING ============
+
+  /// @brief Indexes the fields of an object into a Map
+  /// @param map: The outer map
+  /// @param obj: The objects that should be indexed
+  /// @param excludeKeys: Optional list of keys to skip removal
+  /// @param add: If true, adds the ID to the index; if false, removes it
+  private indexFields(
+    map: Map<string, Map<any, Set<number>>>,
+    obj: Record<string, any>,
+    excludeKeys: string[] = [],
+    add: boolean
+  ): void {
+    for (const [key, value] of Object.entries(obj)) {
+      if (excludeKeys.includes(key)) continue;
+
+      if (!map.has(key)) map.set(key, new Map());
+
+      const valueMap = map.get(key)!;
+
+      if (!valueMap.has(value)) valueMap.set(value, new Set());
+
+      if (add) {
+        valueMap.get(value)!.add(obj.id);
+      } else {
+        valueMap.get(value)!.delete(obj.id);
+        if (valueMap.get(value)!.size === 0) valueMap.delete(value);
+      }
+    }
+  }
+
+  /// @brief Removes an object's fields from the index map
+  /// @param map: The outer map
+  /// @param obj: The objects index that should be removed
+  /// @param excludeKeys: Optional list of keys to skip removal
+  private removeIndex(
+    map: Map<string, Map<any, Set<number>>>,
+    obj: Record<string, any>,
+    excludeKeys: string[] = []
+  ): void {
+    this.indexFields(map, obj, excludeKeys, false);
+  }
+
   // ============ BASIC OPERATIONS ============
 
   /// @brief Insert operator
@@ -177,9 +268,6 @@ export class Database {
     const new_data: DataIndex = { id, ...data, metadata };
 
     await this.save_async({ type: "insert", data: new_data });
-
-    this.storage.push(new_data);
-    this.index.set(id, new_data);
 
     const timeoutId = setTimeout(async () => {
       await this.delete(id);
@@ -222,14 +310,25 @@ export class Database {
   filter(filter?: Partial<DataIndex>): DataIndex[] {
     if (!filter) return this.storage;
 
-    if ("id" in filter && filter.id !== undefined) {
-      const record = this.index.get(filter.id);
-      return record ? [record] : [];
+    const idSets: Set<number>[] = [];
+
+    for (const [key, value] of Object.entries(filter)) {
+      let map = key === "metadata" ? this.metadata_map : this.data_map;
+
+      const valueMap = map.get(key);
+
+      if (!valueMap || !valueMap.has(value)) return [];
+
+      idSets.push(valueMap.get(value)!);
     }
 
-    return this.storage.filter((r) =>
-      Object.entries(filter).every(([k, v]) => r[k] === v)
+    if (idSets.length === 0) return [];
+
+    const ids = idSets.reduce(
+      (a, b) => new Set([...a].filter((x) => b.has(x)))
     );
+
+    return [...ids].map((id) => this.index.get(id)!);
   }
 
   /// @brief Update operator
@@ -240,6 +339,18 @@ export class Database {
     const record = this.index.get(id);
 
     if (!record) return false;
+
+    this.removeIndex(this.data_map, record, ["metadata"]);
+
+    if (record.metadata)
+      this.removeIndex(this.metadata_map, record.metadata, []);
+
+    Object.assign(record, updates);
+
+    this.indexFields(this.data_map, record, ["metadata"], true);
+
+    if (record.metadata)
+      this.indexFields(this.metadata_map, record.metadata, [], true);
 
     await this.save_async({ type: "update", id, changes: updates });
 
