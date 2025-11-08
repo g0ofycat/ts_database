@@ -1,8 +1,11 @@
 {
   "scripts": {
-    "start": "ts-node src/test_db.ts"
+    "build": "tsc",
+    "start": "node dist/test_db.js"
   },
   "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2",
     "@types/node": "^24.10.0"
   }
 }
