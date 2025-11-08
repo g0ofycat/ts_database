@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
 
-import { DataIndex, LogRecord } from "./types/database_types";
+import { DataIndex, LogRecord } from "../types/database_types";
 
 // ============ INIT ============
 

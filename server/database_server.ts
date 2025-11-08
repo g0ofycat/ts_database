@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { Database } from "../backend/database";
+import { Database } from "../backend/database/database";
 
 // ============ INIT ============
 
@@ -30,19 +30,10 @@ app.post("/set_api_key", (req: Request, res: Response) => {
 // ======= MIDDLEWARE =======
 
 const validateData = (req: Request, res: Response, next: () => void) => {
-  const { metadata, ...data } = req.body;
+  const { metadata, ...data } = req.body ?? {};
 
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     return res.status(400).json({ error: "Data must be an object" });
-  }
-
-  if (
-    metadata !== undefined &&
-    (typeof metadata !== "object" || Array.isArray(metadata))
-  ) {
-    return res
-      .status(400)
-      .json({ error: "Metadata must be an object if provided" });
   }
 
   next();
