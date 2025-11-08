@@ -1,6 +1,7 @@
 {
   "scripts": {
     "build": "tsc",
+    "postinstall": "yarn build",
     "start": "node dist/server/database_server.js"
   },
   "devDependencies": {
