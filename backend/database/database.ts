@@ -34,7 +34,7 @@ export class Database {
   /// @param file_size_limit: The size of each file in bytes before creating a new one
   constructor(
     api_key: string,
-    filePath = "database_data.json",
+    filePath = path.join(__dirname, "../data_versions", "database_data.json"),
     file_size_limit = 10000
   ) {
     if (api_key !== process.env.DATABASE_API_KEY) {
@@ -372,5 +372,16 @@ export class Database {
   /// @return DataIndex[]
   all(): DataIndex[] {
     return [...this.storage];
+  }
+
+  // ============ UTILITY OPERATIONS ============
+
+  /// @brief Bulk apply logs
+  /// @param logs: List of LogRecord
+  /// @return Promise<void>
+  async applyLogs(logs: LogRecord[]): Promise<void> {
+    for (const log of logs) {
+      this.applyLog(log);
+    }
   }
 }

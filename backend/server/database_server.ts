@@ -135,7 +135,7 @@ app.delete("/delete/:id", async (req: Request, res: Response) => {
 
 // ======= ALL OPERATOR =======
 
-app.get("/all", (req: Request, res: Response) => {
+app.get("/all", (_: Request, res: Response) => {
   try {
     res.json(database!.all());
   } catch (error) {
