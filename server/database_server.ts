@@ -1,8 +1,5 @@
 import express, { Request, Response } from "express";
 import { Database } from "../backend/database";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 // ============ INIT ============
 
@@ -20,9 +17,6 @@ app.post("/set_api_key", (req: Request, res: Response) => {
   if (!apiKey) {
     return res.status(400).json({ error: "API key is required" });
   }
-
-  console.log("Received:", apiKey);
-  console.log("Expected:", process.env.DATABASE_API_KEY);
 
   try {
     database = new Database(apiKey);
