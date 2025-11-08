@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "start": "ts-node src/test_db.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0"
+  }
+}
