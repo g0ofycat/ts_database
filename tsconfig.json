@@ -16,6 +16,6 @@
   },
   "include": [
     "backend/**/*",
-    "server/**/*"
+    "backend/server/**/*"
   ]
 }

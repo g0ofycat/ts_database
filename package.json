@@ -2,7 +2,7 @@
   "scripts": {
     "build": "tsc",
     "postinstall": "yarn build",
-    "start": "node dist/server/database_server.js"
+    "start": "node dist/backend/server/database_server.js"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

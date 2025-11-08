@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
 
-import { DataIndex, LogRecord } from "../types/database_types";
+import { DataIndex, LogRecord } from "./types/database_types";
 
 // ============ INIT ============
 
@@ -52,7 +52,7 @@ export class Database {
   /// @brief Appends certain actions to the file
   /// @param log
   /// @return Promise<void>
-  private async save_async(log: LogRecord): Promise<void> {
+  private async log_async(log: LogRecord): Promise<void> {
     const currentFile = await this.getCurrentFile();
 
     try {
@@ -185,7 +185,7 @@ export class Database {
       const fileExists = await fs.promises.stat(currentFile).catch(() => null);
 
       if (!fileExists) {
-        await fs.promises.writeFile(currentFile, "[]");
+        await fs.promises.writeFile(currentFile, "");
       }
 
       return currentFile;
@@ -249,7 +249,7 @@ export class Database {
 
     const new_data: DataIndex = { id, ...data, metadata };
 
-    await this.save_async({ type: "insert", data: new_data });
+    await this.log_async({ type: "insert", data: new_data });
 
     return id;
   }
@@ -267,7 +267,7 @@ export class Database {
     const id = this.current_id++;
     const new_data: DataIndex = { id, ...data, metadata };
 
-    await this.save_async({ type: "insert", data: new_data });
+    await this.log_async({ type: "insert", data: new_data });
 
     const timeoutId = setTimeout(async () => {
       await this.delete(id);
@@ -352,7 +352,7 @@ export class Database {
     if (record.metadata)
       this.indexFields(this.metadata_map, record.metadata, [], true);
 
-    await this.save_async({ type: "update", id, changes: updates });
+    await this.log_async({ type: "update", id, changes: updates });
 
     return true;
   }
@@ -363,7 +363,7 @@ export class Database {
   async delete(id: number): Promise<boolean> {
     if (!this.index.has(id)) return false;
 
-    await this.save_async({ type: "delete", id });
+    await this.log_async({ type: "delete", id });
 
     return true;
   }

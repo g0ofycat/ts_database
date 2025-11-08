@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { Database } from "../backend/database/database";
+import { Database } from "../database/database";
 
 // ============ INIT ============
 
