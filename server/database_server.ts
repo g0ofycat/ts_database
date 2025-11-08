@@ -12,7 +12,8 @@ app.use(express.json());
 
 app.post("/insert", async (req: Request, res: Response) => {
   try {
-    const id = await database.insert(req.body);
+    const id = await database.insert(req.body, req.body.metadata);
+
     res.json({ id });
   } catch (error) {
     console.error("Error inserting data:", error);
@@ -27,6 +28,7 @@ app.post("/insert_temp", async (req: Request, res: Response) => {
       req.body,
       req.body.metadata
     );
+
     res.json({ id });
   } catch (error) {
     console.error("Error inserting temporary data:", error);
@@ -39,6 +41,7 @@ app.post("/insert_temp", async (req: Request, res: Response) => {
 app.get("/get/:id", (req: Request, res: Response) => {
   try {
     const record = database.get(Number(req.params.id));
+
     if (record) {
       res.json(record);
     } else {
@@ -55,6 +58,7 @@ app.get("/get/:id", (req: Request, res: Response) => {
 app.post("/filter", (req: Request, res: Response) => {
   try {
     const result = database.filter(req.body);
+
     res.json(result);
   } catch (error) {
     console.error("Error filtering data:", error);
@@ -67,6 +71,7 @@ app.post("/filter", (req: Request, res: Response) => {
 app.patch("/update/:id", async (req: Request, res: Response) => {
   try {
     const success = await database.update(Number(req.params.id), req.body);
+
     res.json({ success });
   } catch (error) {
     console.error("Error updating data:", error);
@@ -79,6 +84,7 @@ app.patch("/update/:id", async (req: Request, res: Response) => {
 app.delete("/delete/:id", async (req: Request, res: Response) => {
   try {
     const success = await database.delete(Number(req.params.id));
+
     res.json({ success });
   } catch (error) {
     console.error("Error deleting data:", error);
@@ -102,6 +108,7 @@ app.get("/all", (req: Request, res: Response) => {
 app.patch("/cancel_temp/:id", async (req: Request, res: Response) => {
   try {
     const success = await database.cancel_temp_delete(Number(req.params.id));
+
     res.json({ success });
   } catch (error) {
     console.error("Error canceling temporary deletion:", error);
