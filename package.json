@@ -1,7 +1,7 @@
 {
   "scripts": {
     "build": "tsc",
-    "start": "node dist/test_db.js"
+    "start": "node dist/server/database_server.js"
   },
   "devDependencies": {
     "ts-node": "^10.9.1",

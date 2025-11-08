@@ -47,3 +47,11 @@ app.delete("/delete/:id", (req, res) => {
 // ======= ALL OPERATOR =======
 
 app.get("/all", (req, res) => res.json(database.all()));
+
+// ======= START SERVER =======
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
