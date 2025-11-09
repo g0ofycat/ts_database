@@ -19,6 +19,27 @@ export class VersionController {
 
   // ============ VERSION CONTROL OPERATIONS ============
 
+  /// @brief Create a new empty version (no data)
+  /// @param version: The name of the new version
+  /// @return Promise<void>
+  async createEmptyVersion(version: string): Promise<void> {
+    const dir = path.join(this.baseDir, version);
+
+    await fs.promises.mkdir(dir, { recursive: true });
+
+    const metadata = {
+      timestamp: new Date().toISOString(),
+      totalRecords: 0,
+      chunks: 0,
+    };
+
+    await fs.promises.writeFile(
+      path.join(dir, "metadata.json"),
+      JSON.stringify(metadata, null, 2),
+      "utf-8"
+    );
+  }
+
   /// @brief Create a new version
   /// @param db: The database to create a version of
   /// @param version: The name of the version

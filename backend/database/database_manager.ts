@@ -389,6 +389,13 @@ export class DatabaseManager {
 
   // ============ VERSION CONTROL OPERATIONS ============
 
+  /// @brief Create an empty version (no data)
+  /// @param versionName: Name for this empty version
+  /// @return Promise<void>
+  async createEmptyVersion(versionName: string): Promise<void> {
+    await this.version_controller.createEmptyVersion(versionName);
+  }
+
   /// @brief Create a snapshot of the current database state
   /// @param versionName: Name for this version
   /// @param chunkSize: Optional chunk size for large databases

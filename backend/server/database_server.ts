@@ -159,6 +159,26 @@ app.patch("/cancel_temp/:id", async (req: Request, res: Response) => {
 
 // ======= VERSION CONTROL OPERATORS =======
 
+app.post("/versions/create_empty/:name", async (req: Request, res: Response) => {
+  try {
+    const { name } = req.params;
+
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ error: "Version name is required" });
+    }
+
+    await db_manager!.createEmptyVersion(name);
+
+    res.json({
+      success: true,
+      message: `Empty version "${name}" created successfully`,
+    });
+  } catch (error) {
+    console.error("Error creating empty version:", error);
+    res.status(500).json({ error: "Failed to create empty version" });
+  }
+});
+
 app.post("/versions/create/:name", async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
