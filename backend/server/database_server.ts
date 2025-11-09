@@ -204,9 +204,8 @@ app.post("/versions/create/:name", async (req: Request, res: Response) => {
 app.post("/versions/load/:name", async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
-    const apiKey = process.env.DATABASE_API_KEY!;
-
-    db_manager = new DatabaseManager(apiKey, false, name);
+    
+    db_manager = await db_manager!.loadVersion(name!);
 
     res.json({
       success: true,

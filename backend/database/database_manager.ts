@@ -409,22 +409,9 @@ export class DatabaseManager {
 
   /// @brief Load database to a previous version
   /// @param versionName: Name of the version to restore
-  /// @warning: This will replace current data
-  /// @return Promise<void>
-  async loadVersion(versionName: string): Promise<void> {
-    const versionDb = await this.version_controller.loadVersion(versionName);
-
-    const allIds = this.all().map((record) => record.id);
-
-    for (const id of allIds) {
-      await this.delete(id);
-    }
-
-    const versionData = versionDb.all();
-
-    for (const record of versionData) {
-      await this.log_async({ type: "insert", data: record });
-    }
+  /// @return Promise<DatabaseManager>: New database instance for this version
+  async loadVersion(versionName: string): Promise<DatabaseManager> {
+    return await this.version_controller.loadVersion(versionName);
   }
 
   /// @brief Delete a saved version

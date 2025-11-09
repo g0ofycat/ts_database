@@ -88,36 +88,11 @@ export class VersionController {
     const dir = path.join(this.baseDir, version);
     if (!fs.existsSync(dir)) throw new Error("Version does not exist");
 
-    const db = new DatabaseManager(process.env.DATABASE_API_KEY!, true);
-
-    const files = fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith(".json") && f !== "metadata.json")
-      .sort((a, b) => {
-        const idxA = parseInt(a.match(/_(\d+)\.json$/)?.[1] ?? "0");
-        const idxB = parseInt(b.match(/_(\d+)\.json$/)?.[1] ?? "0");
-        return idxA - idxB;
-      });
-
-    for (const file of files) {
-      try {
-        const raw = (
-          await fs.promises.readFile(path.join(dir, file), "utf-8")
-        ).trim();
-        if (!raw) continue;
-
-        const data = JSON.parse(raw);
-
-        if (!Array.isArray(data)) {
-          console.warn(`[VersionController] Skipped non-array file: ${file}`);
-          continue;
-        }
-
-        await db.applyLogs(data);
-      } catch (err) {
-        console.error(`[VersionController] Failed to load ${file}:`, err);
-      }
-    }
+    const db = new DatabaseManager(
+      process.env.DATABASE_API_KEY!, 
+      false,
+      version
+    );
 
     return db;
   }
