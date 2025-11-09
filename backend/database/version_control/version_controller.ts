@@ -27,6 +27,12 @@ export class VersionController {
 
     await fs.promises.mkdir(dir, { recursive: true });
 
+    await fs.promises.writeFile(
+      path.join(dir, "data_0.json"),
+      JSON.stringify([], null, 2),
+      "utf-8"
+    );
+
     const metadata = {
       timestamp: new Date().toISOString(),
       totalRecords: 0,
