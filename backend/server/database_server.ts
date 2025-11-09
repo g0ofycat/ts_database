@@ -204,7 +204,7 @@ app.post("/versions/create/:name", async (req: Request, res: Response) => {
 app.post("/versions/load/:name", async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
-    
+
     db_manager = await db_manager!.loadVersion(name!);
 
     res.json({

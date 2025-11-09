@@ -89,7 +89,7 @@ export class VersionController {
     if (!fs.existsSync(dir)) throw new Error("Version does not exist");
 
     const db = new DatabaseManager(
-      process.env.DATABASE_API_KEY!, 
+      process.env.DATABASE_API_KEY!,
       false,
       version
     );
