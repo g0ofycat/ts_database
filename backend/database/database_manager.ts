@@ -22,14 +22,11 @@ export class DatabaseManager {
   private data_map: Map<string, Map<any, Set<number>>> = new Map();
   private metadata_map: Map<string, Map<any, Set<number>>> = new Map();
 
+  public current_id = 0;
   private file_size_limit = 0;
 
   private file_path: string;
   private version_controller: VersionController;
-
-  // ============ PUBLIC DATA ============
-
-  public current_id = 0;
 
   // ============ CONSTRUCTOR ============
 
@@ -104,14 +101,16 @@ export class DatabaseManager {
 
       for (const file of files) {
         const file_path = path.join(dir, file);
-        const data = await fs.promises.readFile(file_path, "utf-8");
-        const lines = data.split("\n");
+        const raw = await fs.promises.readFile(file_path, "utf-8");
 
-        for (const line of lines) {
-          if (!line.trim()) continue;
+        if (!raw.trim()) continue;
 
-          const log: LogRecord = JSON.parse(line);
-          this.applyLog(log);
+        try {
+          const logs: LogRecord[] = JSON.parse(raw);
+
+          await this.applyLogs(logs);
+        } catch (err) {
+          console.error(`Failed to parse file ${file_path}:`, err);
         }
       }
     } catch (err) {
@@ -410,6 +409,8 @@ export class DatabaseManager {
     for (const id of allIds) {
       await this.delete(id);
     }
+
+    this.current_id = 0;
 
     const versionData = versionDb.all();
 

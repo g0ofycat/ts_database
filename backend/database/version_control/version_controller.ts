@@ -39,6 +39,7 @@ export class VersionController {
     for (let i = 0; i < allLogs.length; i += chunkSize) {
       const chunk = allLogs.slice(i, i + chunkSize);
       const filePath = path.join(dir, `data_${Math.floor(i / chunkSize)}.json`);
+
       await fs.promises.writeFile(
         filePath,
         JSON.stringify(chunk, null, 2),
@@ -49,8 +50,7 @@ export class VersionController {
     const metadata = {
       timestamp: new Date().toISOString(),
       totalRecords: allLogs.length,
-      chunks: Math.ceil(allLogs.length / chunkSize),
-      lastId: db.current_id,
+      chunks: Math.ceil(allLogs.length / chunkSize)
     };
 
     await fs.promises.writeFile(
@@ -86,6 +86,7 @@ export class VersionController {
         if (!raw) continue;
 
         const data = JSON.parse(raw);
+
         if (!Array.isArray(data)) {
           console.warn(`[VersionController] Skipped non-array file: ${file}`);
           continue;
@@ -94,20 +95,6 @@ export class VersionController {
         await db.applyLogs(data);
       } catch (err) {
         console.error(`[VersionController] Failed to load ${file}:`, err);
-      }
-    }
-
-    const metadataPath = path.join(dir, "metadata.json");
-    if (fs.existsSync(metadataPath)) {
-      try {
-        const meta = JSON.parse(
-          await fs.promises.readFile(metadataPath, "utf-8")
-        );
-        if (meta.lastId !== undefined) {
-          (db as any).current_id = meta.lastId + 1;
-        }
-      } catch (err) {
-        console.warn("[VersionController] Could not read metadata.json:", err);
       }
     }
 
