@@ -410,8 +410,6 @@ export class DatabaseManager {
       await this.delete(id);
     }
 
-    this.current_id = 0;
-
     const versionData = versionDb.all();
 
     for (const record of versionData) {
