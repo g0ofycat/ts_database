@@ -28,7 +28,6 @@ export class VersionController {
   async createVersion(
     db: DatabaseManager,
     version: string,
-    lastId: number,
     chunkSize = 500
   ): Promise<void> {
     const dir = path.join(this.baseDir, version);
@@ -51,7 +50,7 @@ export class VersionController {
       timestamp: new Date().toISOString(),
       totalRecords: allLogs.length,
       chunks: Math.ceil(allLogs.length / chunkSize),
-      lastId: lastId,
+      lastId: db.current_id,
     };
 
     await fs.promises.writeFile(

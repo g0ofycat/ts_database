@@ -22,11 +22,14 @@ export class DatabaseManager {
   private data_map: Map<string, Map<any, Set<number>>> = new Map();
   private metadata_map: Map<string, Map<any, Set<number>>> = new Map();
 
-  private current_id = 0;
   private file_size_limit = 0;
 
   private file_path: string;
   private version_controller: VersionController;
+
+  // ============ PUBLIC DATA ============
+
+  public current_id = 0;
 
   // ============ CONSTRUCTOR ============
 
@@ -69,12 +72,18 @@ export class DatabaseManager {
   /// @return Promise<void>
   private async log_async(log: LogRecord): Promise<void> {
     const currentFile = await this.getCurrentFile();
+    const logText = JSON.stringify(log, null, 2);
 
-    try {
-      await fs.promises.appendFile(currentFile, JSON.stringify(log) + "\n");
-    } catch (err) {
-      console.error("Error writing to file:", err);
-      throw err;
+    const stat = await fs.promises.stat(currentFile);
+    const isEmpty = stat.size === 0;
+
+    if (isEmpty) {
+      await fs.promises.writeFile(currentFile, `[\n${logText}\n]`);
+    } else {
+      const data = (await fs.promises.readFile(currentFile, "utf-8")).trim();
+      const newData = data.slice(0, -1) + `,\n${logText}\n]`;
+
+      await fs.promises.writeFile(currentFile, newData);
     }
 
     this.applyLog(log);
@@ -165,49 +174,39 @@ export class DatabaseManager {
     const dir = path.dirname(this.file_path);
     const base = path.basename(this.file_path, ".json");
 
-    try {
-      await fs.promises.mkdir(dir, { recursive: true });
-    } catch (err) {
-      console.error("Error creating directory:", err);
-      throw err;
-    }
+    await fs.promises.mkdir(dir, { recursive: true });
 
-    try {
-      const files = (await fs.promises.readdir(dir))
-        .filter((f) => f.startsWith(base + "_"))
-        .sort((a, b) => {
-          const idxA = parseInt(a.match(/_(\d+)\.json$/)?.[1] || "0");
-          const idxB = parseInt(b.match(/_(\d+)\.json$/)?.[1] || "0");
-          return idxA - idxB;
-        });
+    const files = (await fs.promises.readdir(dir))
+      .filter((f) => f.startsWith(base + "_"))
+      .sort((a, b) => {
+        const idxA = parseInt(a.match(/_(\d+)\.json$/)?.[1] || "0");
+        const idxB = parseInt(b.match(/_(\d+)\.json$/)?.[1] || "0");
+        return idxA - idxB;
+      });
 
-      const lastFile = files[files.length - 1];
-      const lastIndex = lastFile
-        ? parseInt(lastFile.match(/_(\d+)\.json$/)?.[1] ?? "0")
-        : -1;
+    const lastFile = files[files.length - 1];
+    const lastIndex = lastFile
+      ? parseInt(lastFile.match(/_(\d+)\.json$/)?.[1] ?? "0")
+      : -1;
 
-      let currentIndex = lastIndex + 1;
-      let currentFile = path.join(dir, `${base}_${currentIndex}.json`);
+    let currentFile: string;
 
-      const lastFileStat = await fs.promises
-        .stat(path.join(dir, `${base}_${lastIndex}.json`))
-        .catch(() => null);
+    if (lastIndex === -1) {
+      currentFile = path.join(dir, `${base}_0.json`);
+      await fs.promises.writeFile(currentFile, "");
+    } else {
+      const lastFilePath = path.join(dir, `${base}_${lastIndex}.json`);
+      const stat = await fs.promises.stat(lastFilePath);
 
-      if (!lastFileStat || lastFileStat.size < this.file_size_limit) {
+      if (stat.size < this.file_size_limit) {
+        currentFile = lastFilePath;
+      } else {
         currentFile = path.join(dir, `${base}_${lastIndex + 1}.json`);
-      }
-
-      const fileExists = await fs.promises.stat(currentFile).catch(() => null);
-
-      if (!fileExists) {
         await fs.promises.writeFile(currentFile, "");
       }
-
-      return currentFile;
-    } catch (err) {
-      console.error("Error reading directory or processing files:", err);
-      throw err;
     }
+
+    return currentFile;
   }
 
   // ============ INDEXING ============
@@ -395,13 +394,8 @@ export class DatabaseManager {
   /// @param versionName: Name for this version
   /// @param chunkSize: Optional chunk size for large databases
   /// @return Promise<void>
-  async saveVersion(versionName: string, chunkSize = 500): Promise<void> {
-    await this.version_controller.createVersion(
-      this,
-      versionName,
-      this.current_id,
-      chunkSize
-    );
+  async createVersion(versionName: string, chunkSize = 500): Promise<void> {
+    await this.version_controller.createVersion(this, versionName, chunkSize);
   }
 
   /// @brief Load database to a previous version

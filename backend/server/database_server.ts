@@ -3,7 +3,7 @@ import { DatabaseManager } from "../database/database_manager";
 
 // ============ INIT ============
 
-let database: DatabaseManager | null = null;
+let db_manager: DatabaseManager | null = null;
 
 const app = express();
 
@@ -19,7 +19,7 @@ app.post("/set_api_key", (req: Request, res: Response) => {
   }
 
   try {
-    database = new DatabaseManager(apiKey);
+    db_manager = new DatabaseManager(apiKey);
     return res.json({ success: true, message: "API key set successfully" });
   } catch (err) {
     console.error("Failed to initialize database:", err);
@@ -40,7 +40,7 @@ const validateData = (req: Request, res: Response, next: () => void) => {
 };
 
 const requireDatabase = (req: Request, res: Response, next: () => void) => {
-  if (!database && req.path !== "/set_api_key") {
+  if (!db_manager && req.path !== "/set_api_key") {
     return res.status(403).json({ error: "API key not set" });
   }
 
@@ -53,7 +53,7 @@ app.use(requireDatabase);
 
 app.post("/insert", validateData, async (req: Request, res: Response) => {
   try {
-    const id = await database!.insert(req.body, req.body.metadata);
+    const id = await db_manager!.insert(req.body, req.body.metadata);
 
     res.json({ id });
   } catch (error) {
@@ -64,7 +64,7 @@ app.post("/insert", validateData, async (req: Request, res: Response) => {
 
 app.post("/insert_temp", validateData, async (req: Request, res: Response) => {
   try {
-    const id = await database!.insert_temp(
+    const id = await db_manager!.insert_temp(
       req.body.timeout,
       req.body,
       req.body.metadata
@@ -81,7 +81,7 @@ app.post("/insert_temp", validateData, async (req: Request, res: Response) => {
 
 app.get("/get/:id", (req: Request, res: Response) => {
   try {
-    const record = database!.get(Number(req.params.id));
+    const record = db_manager!.get(Number(req.params.id));
 
     if (record) {
       res.json(record);
@@ -98,7 +98,7 @@ app.get("/get/:id", (req: Request, res: Response) => {
 
 app.post("/filter", (req: Request, res: Response) => {
   try {
-    const result = database!.filter(req.body);
+    const result = db_manager!.filter(req.body);
 
     res.json(result);
   } catch (error) {
@@ -111,7 +111,7 @@ app.post("/filter", (req: Request, res: Response) => {
 
 app.patch("/update/:id", async (req: Request, res: Response) => {
   try {
-    const success = await database!.update(Number(req.params.id), req.body);
+    const success = await db_manager!.update(Number(req.params.id), req.body);
 
     res.json({ success });
   } catch (error) {
@@ -124,7 +124,7 @@ app.patch("/update/:id", async (req: Request, res: Response) => {
 
 app.delete("/delete/:id", async (req: Request, res: Response) => {
   try {
-    const success = await database!.delete(Number(req.params.id));
+    const success = await db_manager!.delete(Number(req.params.id));
 
     res.json({ success });
   } catch (error) {
@@ -137,7 +137,7 @@ app.delete("/delete/:id", async (req: Request, res: Response) => {
 
 app.get("/all", (_: Request, res: Response) => {
   try {
-    res.json(database!.all());
+    res.json(db_manager!.all());
   } catch (error) {
     console.error("Error fetching all data:", error);
     res.status(500).json({ error: "Failed to fetch data" });
@@ -148,7 +148,7 @@ app.get("/all", (_: Request, res: Response) => {
 
 app.patch("/cancel_temp/:id", async (req: Request, res: Response) => {
   try {
-    const success = await database!.cancel_temp_delete(Number(req.params.id));
+    const success = await db_manager!.cancel_temp_delete(Number(req.params.id));
 
     res.json({ success });
   } catch (error) {
@@ -159,7 +159,7 @@ app.patch("/cancel_temp/:id", async (req: Request, res: Response) => {
 
 // ======= VERSION CONTROL OPERATORS =======
 
-app.post("/versions/save/:name", async (req: Request, res: Response) => {
+app.post("/versions/create/:name", async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
     const { chunkSize } = req.body;
@@ -168,7 +168,7 @@ app.post("/versions/save/:name", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Version name is required" });
     }
 
-    await database!.saveVersion(name, chunkSize || 500);
+    await db_manager!.createVersion(name, chunkSize || 500);
 
     res.json({
       success: true,
@@ -184,7 +184,7 @@ app.post("/versions/load/:name", async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
 
-    await database!.loadVersion(name!);
+    await db_manager!.loadVersion(name!);
 
     res.json({
       success: true,
@@ -203,7 +203,7 @@ app.delete("/versions/delete/:name", async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
 
-    const success = await database!.deleteVersion(name!);
+    const success = await db_manager!.deleteVersion(name!);
 
     if (success) {
       res.json({
@@ -221,7 +221,7 @@ app.delete("/versions/delete/:name", async (req: Request, res: Response) => {
 
 app.get("/versions", (_: Request, res: Response) => {
   try {
-    const versions = database!.listVersions();
+    const versions = db_manager!.listVersions();
 
     res.json({ versions });
   } catch (error) {
