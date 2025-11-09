@@ -1,9 +1,9 @@
 import express, { Request, Response } from "express";
-import { Database } from "../database/database";
+import { DatabaseManager } from "../database/database_manager";
 
 // ============ INIT ============
 
-let database: Database | null = null;
+let database: DatabaseManager | null = null;
 
 const app = express();
 
@@ -19,7 +19,7 @@ app.post("/set_api_key", (req: Request, res: Response) => {
   }
 
   try {
-    database = new Database(apiKey);
+    database = new DatabaseManager(apiKey);
     return res.json({ success: true, message: "API key set successfully" });
   } catch (err) {
     console.error("Failed to initialize database:", err);
@@ -154,6 +154,79 @@ app.patch("/cancel_temp/:id", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error canceling temporary deletion:", error);
     res.status(500).json({ error: "Failed to cancel temporary deletion" });
+  }
+});
+
+// ======= VERSION CONTROL OPERATORS =======
+
+app.post("/versions/save/:name", async (req: Request, res: Response) => {
+  try {
+    const { name } = req.params;
+    const { chunkSize } = req.body;
+
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ error: "Version name is required" });
+    }
+
+    await database!.saveVersion(name, chunkSize || 500);
+
+    res.json({
+      success: true,
+      message: `Version "${name}" created successfully`,
+    });
+  } catch (error) {
+    console.error("Error creating version:", error);
+    res.status(500).json({ error: "Failed to create version" });
+  }
+});
+
+app.post("/versions/load/:name", async (req: Request, res: Response) => {
+  try {
+    const { name } = req.params;
+
+    await database!.loadVersion(name!);
+
+    res.json({
+      success: true,
+      message: `Database restored to version "${name}"`,
+    });
+  } catch (error) {
+    console.error("Error restoring version:", error);
+    res.status(500).json({
+      error:
+        error instanceof Error ? error.message : "Failed to restore version",
+    });
+  }
+});
+
+app.delete("/versions/delete/:name", async (req: Request, res: Response) => {
+  try {
+    const { name } = req.params;
+
+    const success = await database!.deleteVersion(name!);
+
+    if (success) {
+      res.json({
+        success: true,
+        message: `Version "${name}" deleted successfully`,
+      });
+    } else {
+      res.status(404).json({ error: "Version not found" });
+    }
+  } catch (error) {
+    console.error("Error deleting version:", error);
+    res.status(500).json({ error: "Failed to delete version" });
+  }
+});
+
+app.get("/versions", (_: Request, res: Response) => {
+  try {
+    const versions = database!.listVersions();
+
+    res.json({ versions });
+  } catch (error) {
+    console.error("Error listing versions:", error);
+    res.status(500).json({ error: "Failed to list versions" });
   }
 });
 

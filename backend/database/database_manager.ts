@@ -2,15 +2,16 @@ import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
 
+import { VersionController } from "./version_control/version_controller";
 import { DataIndex, LogRecord } from "./types/database_types";
 
 // ============ INIT ============
 
 dotenv.config();
 
-// ============ database.ts ============
+// ============ database_manager.ts ============
 
-export class Database {
+export class DatabaseManager {
   // ============ PRIVATE DATA ============
 
   private storage: DataIndex[] = [];
@@ -21,30 +22,44 @@ export class Database {
   private data_map: Map<string, Map<any, Set<number>>> = new Map();
   private metadata_map: Map<string, Map<any, Set<number>>> = new Map();
 
-  private filePath: string;
-
   private current_id = 0;
   private file_size_limit = 0;
+
+  private file_path: string;
+  private version_controller: VersionController;
 
   // ============ CONSTRUCTOR ============
 
   /// @brief Constructor for Database
   /// @param api_key: The API key
-  /// @param filePath: Name of the file to save the data to
+  /// @param skip_load: Whether to skip database loading
+  /// @param file_path: Name of the file to save the data to
   /// @param file_size_limit: The size of each file in bytes before creating a new one
+  /// @param version_base_dir?: Base directory of the version
   constructor(
     api_key: string,
-    filePath = path.join(__dirname, "../data_versions", "database_data.json"),
-    file_size_limit = 10000
+    skip_load = false,
+    file_path = path.join(
+      __dirname,
+      "../data_versions/default",
+      "database_data.json"
+    ),
+    file_size_limit = 100000,
+    version_base_dir?: string
   ) {
     if (api_key !== process.env.DATABASE_API_KEY) {
       throw new Error("Invalid API key");
     }
 
-    this.filePath = path.resolve(filePath);
+    this.file_path = path.resolve(file_path);
+    this.version_controller = new VersionController(version_base_dir);
     this.file_size_limit = file_size_limit;
 
-    this.load_async().catch((err) => console.error("Error loading data:", err));
+    if (!skip_load) {
+      this.load_async().catch((err) =>
+        console.error("Error loading data:", err)
+      );
+    }
   }
 
   // ============ PERSISTENCE ============
@@ -68,8 +83,8 @@ export class Database {
   /// @brief Load data from a file
   /// @return Promise<void>
   private async load_async(): Promise<void> {
-    const dir = path.dirname(this.filePath);
-    const base = path.basename(this.filePath, ".json");
+    const dir = path.dirname(this.file_path);
+    const base = path.basename(this.file_path, ".json");
 
     try {
       await fs.promises.mkdir(dir, { recursive: true });
@@ -79,8 +94,8 @@ export class Database {
       );
 
       for (const file of files) {
-        const filePath = path.join(dir, file);
-        const data = await fs.promises.readFile(filePath, "utf-8");
+        const file_path = path.join(dir, file);
+        const data = await fs.promises.readFile(file_path, "utf-8");
         const lines = data.split("\n");
 
         for (const line of lines) {
@@ -147,8 +162,8 @@ export class Database {
   /// @brief Return the data inside of the file
   /// @return Promise<string>
   private async getCurrentFile(): Promise<string> {
-    const dir = path.dirname(this.filePath);
-    const base = path.basename(this.filePath, ".json");
+    const dir = path.dirname(this.file_path);
+    const base = path.basename(this.file_path, ".json");
 
     try {
       await fs.promises.mkdir(dir, { recursive: true });
@@ -372,6 +387,56 @@ export class Database {
   /// @return DataIndex[]
   all(): DataIndex[] {
     return [...this.storage];
+  }
+
+  // ============ VERSION CONTROL OPERATIONS ============
+
+  /// @brief Create a snapshot of the current database state
+  /// @param versionName: Name for this version
+  /// @param chunkSize: Optional chunk size for large databases
+  /// @return Promise<void>
+  async saveVersion(versionName: string, chunkSize = 500): Promise<void> {
+    await this.version_controller.createVersion(
+      this,
+      versionName,
+      this.current_id,
+      chunkSize
+    );
+  }
+
+  /// @brief Load database to a previous version
+  /// @param versionName: Name of the version to restore
+  /// @warning: This will replace current data
+  /// @return Promise<void>
+  async loadVersion(versionName: string): Promise<void> {
+    const versionDb = await this.version_controller.loadVersion(versionName);
+
+    const allIds = this.all().map((record) => record.id);
+
+    for (const id of allIds) {
+      await this.delete(id);
+    }
+
+    const versionData = versionDb.all();
+
+    for (const record of versionData) {
+      const { id, metadata, ...data } = record;
+
+      await this.insert(data, metadata);
+    }
+  }
+
+  /// @brief Delete a saved version
+  /// @param versionName: Name of the version to delete
+  /// @return Promise<boolean>
+  async deleteVersion(versionName: string): Promise<boolean> {
+    return await this.version_controller.deleteVersion(versionName);
+  }
+
+  /// @brief List all saved versions for this database
+  /// @return string[]
+  listVersions(): string[] {
+    return this.version_controller.listVersions();
   }
 
   // ============ UTILITY OPERATIONS ============

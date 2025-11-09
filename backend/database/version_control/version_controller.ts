@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
-import { Database } from "../database";
+import { DatabaseManager } from "../database_manager";
 
-// ============ VersionController.ts ============
+// ============ version_controller.ts ============
 
 export class VersionController {
   // ============ PRIVATE DATA ============
@@ -17,24 +17,58 @@ export class VersionController {
     this.baseDir = path.resolve(baseDir);
   }
 
-  /// @brief List all versions
-  /// @return string[]
-  listVersions(): string[] {
-    if (!fs.existsSync(this.baseDir)) return [];
+  // ============ VERSION CONTROL OPERATIONS ============
 
-    return fs
-      .readdirSync(this.baseDir)
-      .filter((f) => fs.statSync(path.join(this.baseDir, f)).isDirectory());
+  /// @brief Create a new version
+  /// @param db: The database to create a version of
+  /// @param version: The name of the version
+  /// @param lastId: The last ID of the written data
+  /// @param chunkSize: How many lines of data to load for each chunk
+  /// @return Promise<void>
+  async createVersion(
+    db: DatabaseManager,
+    version: string,
+    lastId: number,
+    chunkSize = 500
+  ): Promise<void> {
+    const dir = path.join(this.baseDir, version);
+
+    await fs.promises.mkdir(dir, { recursive: true });
+
+    const allLogs = db.all().map((data) => ({ type: "insert", data }));
+
+    for (let i = 0; i < allLogs.length; i += chunkSize) {
+      const chunk = allLogs.slice(i, i + chunkSize);
+      const filePath = path.join(dir, `data_${Math.floor(i / chunkSize)}.json`);
+      await fs.promises.writeFile(
+        filePath,
+        JSON.stringify(chunk, null, 2),
+        "utf-8"
+      );
+    }
+
+    const metadata = {
+      timestamp: new Date().toISOString(),
+      totalRecords: allLogs.length,
+      chunks: Math.ceil(allLogs.length / chunkSize),
+      lastId: lastId,
+    };
+
+    await fs.promises.writeFile(
+      path.join(dir, "metadata.json"),
+      JSON.stringify(metadata, null, 2),
+      "utf-8"
+    );
   }
 
   /// @brief Loads a version
   /// @param version: The name of the version
   /// @return Promise<Database>: The database
-  async loadVersion(version: string): Promise<Database> {
+  async loadVersion(version: string): Promise<DatabaseManager> {
     const dir = path.join(this.baseDir, version);
     if (!fs.existsSync(dir)) throw new Error("Version does not exist");
 
-    const db = new Database(process.env.DATABASE_API_KEY!);
+    const db = new DatabaseManager(process.env.DATABASE_API_KEY!, true);
 
     const files = fs
       .readdirSync(dir)
@@ -81,46 +115,6 @@ export class VersionController {
     return db;
   }
 
-  /// @brief Create a new version
-  /// @param db: The database to create a version of
-  /// @param version: The name of the version
-  /// @param chunkSize: How many lines of data to load for each chunk
-  /// @return Promise<void>
-  async createVersion(
-    db: Database,
-    version: string,
-    chunkSize = 500
-  ): Promise<void> {
-    const dir = path.join(this.baseDir, version);
-
-    await fs.promises.mkdir(dir, { recursive: true });
-
-    const allLogs = db.all().map((data) => ({ type: "insert", data }));
-
-    for (let i = 0; i < allLogs.length; i += chunkSize) {
-      const chunk = allLogs.slice(i, i + chunkSize);
-      const filePath = path.join(dir, `data_${Math.floor(i / chunkSize)}.json`);
-      await fs.promises.writeFile(
-        filePath,
-        JSON.stringify(chunk, null, 2),
-        "utf-8"
-      );
-    }
-
-    const metadata = {
-      timestamp: new Date().toISOString(),
-      totalRecords: allLogs.length,
-      chunks: Math.ceil(allLogs.length / chunkSize),
-      lastId: (db as any)["current_id"],
-    };
-
-    await fs.promises.writeFile(
-      path.join(dir, "metadata.json"),
-      JSON.stringify(metadata, null, 2),
-      "utf-8"
-    );
-  }
-
   /// @brief Delete a version
   /// @param version: The name of the version
   /// @return Promise<boolean>: True if deleted, false if version not found
@@ -136,5 +130,17 @@ export class VersionController {
       console.error(`Failed to delete version "${version}":`, error);
       return false;
     }
+  }
+
+  // ============ UTILITY OPERATIONS ============
+
+  /// @brief List all versions
+  /// @return string[]
+  listVersions(): string[] {
+    if (!fs.existsSync(this.baseDir)) return [];
+
+    return fs
+      .readdirSync(this.baseDir)
+      .filter((f) => fs.statSync(path.join(this.baseDir, f)).isDirectory());
   }
 }
