@@ -409,20 +409,35 @@ export class DatabaseManager {
   /// @warning: This will replace current data
   /// @return Promise<void>
   async loadVersion(versionName: string): Promise<void> {
-    const versionDb = await this.version_controller.loadVersion(versionName);
+    const dir = path.join(this.version_controller.baseDir, versionName);
 
-    const allIds = this.all().map((record) => record.id);
+    if (!fs.existsSync(dir)) throw new Error("Version does not exist");
 
-    for (const id of allIds) {
-      await this.delete(id);
-    }
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".json") && f !== "metadata.json")
+      .sort((a, b) => {
+        const idxA = parseInt(a.match(/_(\d+)\.json$/)?.[1] ?? "0");
+        const idxB = parseInt(b.match(/_(\d+)\.json$/)?.[1] ?? "0");
+        return idxA - idxB;
+      });
 
-    const versionData = versionDb.all();
+    const allIds = this.all().map((r) => r.id);
 
-    for (const record of versionData) {
-      const { id, metadata, ...data } = record;
+    for (const id of allIds) await this.delete(id);
 
-      await this.insert(data, metadata);
+    for (const file of files) {
+      const raw = await fs.promises.readFile(path.join(dir, file), "utf-8");
+      if (!raw.trim()) continue;
+
+      const logs = JSON.parse(raw);
+
+      for (const log of logs) {
+        if (log.type === "insert" && log.data) {
+          const { metadata, ...data } = log.data;
+          await this.insert(data, metadata);
+        }
+      }
     }
   }
 

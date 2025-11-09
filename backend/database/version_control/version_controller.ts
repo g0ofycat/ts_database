@@ -5,9 +5,9 @@ import { DatabaseManager } from "../database_manager";
 // ============ version_controller.ts ============
 
 export class VersionController {
-  // ============ PRIVATE DATA ============
+  // ============ PUBLIC DATA ============
 
-  private baseDir: string;
+  public baseDir: string;
 
   // ============ CONSTRUCTOR ============
 
