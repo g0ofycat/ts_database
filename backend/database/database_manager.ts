@@ -33,17 +33,13 @@ export class DatabaseManager {
   /// @brief Constructor for Database
   /// @param api_key: The API key
   /// @param skip_load: Whether to skip database loading
-  /// @param file_path: Name of the file to save the data to
+  /// @param version_name: Name of the current version
   /// @param file_size_limit: The size of each file in bytes before creating a new one
   /// @param version_base_dir?: Base directory of the version
   constructor(
     api_key: string,
     skip_load = false,
-    file_path = path.join(
-      __dirname,
-      "../data_versions/default",
-      "database_data.json"
-    ),
+    version_name = "default",
     file_size_limit = 100000,
     version_base_dir?: string
   ) {
@@ -51,7 +47,14 @@ export class DatabaseManager {
       throw new Error("Invalid API key");
     }
 
-    this.file_path = path.resolve(file_path);
+    this.file_path = path.resolve(
+      path.join(
+        __dirname,
+        `../data_versions/${version_name}`,
+        "database_data.json"
+      )
+    );
+
     this.version_controller = new VersionController(version_base_dir);
     this.file_size_limit = file_size_limit;
 
@@ -268,13 +271,13 @@ export class DatabaseManager {
   }
 
   /// @param Insert temporary data
-  /// @param duration: How long the data will last (seconds)
   /// @param data: The data to add
+  /// @param duration: How long the data will last (seconds)
   /// @param metadata: Any metadata to add
   /// @return Promise<number>: The ID of the temporary data
   async insert_temp(
-    duration: number,
     data: Omit<DataIndex, "id">,
+    duration: number,
     metadata?: any
   ): Promise<number> {
     const id = this.current_id++;

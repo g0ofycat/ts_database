@@ -65,8 +65,8 @@ app.post("/insert", validateData, async (req: Request, res: Response) => {
 app.post("/insert_temp", validateData, async (req: Request, res: Response) => {
   try {
     const id = await db_manager!.insert_temp(
-      req.body.timeout,
       req.body,
+      req.body.timeout,
       req.body.metadata
     );
 
@@ -160,24 +160,25 @@ app.patch("/cancel_temp/:id", async (req: Request, res: Response) => {
 // ======= VERSION CONTROL OPERATORS =======
 
 app.post("/versions/create_empty/:name", async (req: Request, res: Response) => {
-  try {
-    const { name } = req.params;
+    try {
+      const { name } = req.params;
 
-    if (!name || typeof name !== "string") {
-      return res.status(400).json({ error: "Version name is required" });
+      if (!name || typeof name !== "string") {
+        return res.status(400).json({ error: "Version name is required" });
+      }
+
+      await db_manager!.createEmptyVersion(name);
+
+      res.json({
+        success: true,
+        message: `Empty version "${name}" created successfully`,
+      });
+    } catch (error) {
+      console.error("Error creating empty version:", error);
+      res.status(500).json({ error: "Failed to create empty version" });
     }
-
-    await db_manager!.createEmptyVersion(name);
-
-    res.json({
-      success: true,
-      message: `Empty version "${name}" created successfully`,
-    });
-  } catch (error) {
-    console.error("Error creating empty version:", error);
-    res.status(500).json({ error: "Failed to create empty version" });
   }
-});
+);
 
 app.post("/versions/create/:name", async (req: Request, res: Response) => {
   try {
@@ -203,18 +204,18 @@ app.post("/versions/create/:name", async (req: Request, res: Response) => {
 app.post("/versions/load/:name", async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
+    const apiKey = process.env.DATABASE_API_KEY!;
 
-    await db_manager!.loadVersion(name!);
+    db_manager = new DatabaseManager(apiKey, false, name);
 
     res.json({
       success: true,
-      message: `Database restored to version "${name}"`,
+      message: `Database loaded and switched to version "${name}"`,
     });
   } catch (error) {
-    console.error("Error restoring version:", error);
+    console.error("Error loading version:", error);
     res.status(500).json({
-      error:
-        error instanceof Error ? error.message : "Failed to restore version",
+      error: error instanceof Error ? error.message : "Failed to load version",
     });
   }
 });

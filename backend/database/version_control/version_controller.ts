@@ -27,16 +27,10 @@ export class VersionController {
 
     await fs.promises.mkdir(dir, { recursive: true });
 
-    await fs.promises.writeFile(
-      path.join(dir, "data_0.json"),
-      JSON.stringify([], null, 2),
-      "utf-8"
-    );
-
     const metadata = {
       timestamp: new Date().toISOString(),
       totalRecords: 0,
-      chunks: 0,
+      chunks: 1,
     };
 
     await fs.promises.writeFile(
@@ -77,7 +71,7 @@ export class VersionController {
     const metadata = {
       timestamp: new Date().toISOString(),
       totalRecords: allLogs.length,
-      chunks: Math.ceil(allLogs.length / chunkSize)
+      chunks: Math.ceil(allLogs.length / chunkSize),
     };
 
     await fs.promises.writeFile(
