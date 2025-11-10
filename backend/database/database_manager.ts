@@ -16,6 +16,8 @@ export class DatabaseManager {
 
   private storage: DataIndex[] = [];
 
+  private write_queue: Promise<any> = Promise.resolve();
+
   private index: Map<number, DataIndex> = new Map();
   private timeout_data: Map<number, NodeJS.Timeout> = new Map();
 
@@ -27,6 +29,10 @@ export class DatabaseManager {
 
   private file_path: string;
   private version_controller: VersionController;
+
+  // ============ PUBLIC DATA ============
+
+  public version_name: string;
 
   // ============ CONSTRUCTOR ============
 
@@ -55,6 +61,8 @@ export class DatabaseManager {
       )
     );
 
+    this.version_name = version_name;
+
     this.version_controller = new VersionController(version_base_dir);
     this.file_size_limit = file_size_limit;
 
@@ -71,22 +79,23 @@ export class DatabaseManager {
   /// @param log
   /// @return Promise<void>
   private async log_async(log: LogRecord): Promise<void> {
-    const currentFile = await this.getCurrentFile();
-    const logText = JSON.stringify(log, null, 2);
+    await this.queueWrite(async () => {
+      const currentFile = await this.getCurrentFile();
+      const logText = JSON.stringify(log, null, 2);
+      const stat = await fs.promises
+        .stat(currentFile)
+        .catch(() => ({ size: 0 }));
+      const isEmpty = stat.size === 0;
 
-    const stat = await fs.promises.stat(currentFile);
-    const isEmpty = stat.size === 0;
+      const data = isEmpty
+        ? `[\n${logText}\n]`
+        : (await fs.promises.readFile(currentFile, "utf-8"))
+            .trim()
+            .slice(0, -1) + `,\n${logText}\n]`;
 
-    if (isEmpty) {
-      await fs.promises.writeFile(currentFile, `[\n${logText}\n]`);
-    } else {
-      const data = (await fs.promises.readFile(currentFile, "utf-8")).trim();
-      const newData = data.slice(0, -1) + `,\n${logText}\n]`;
-
-      await fs.promises.writeFile(currentFile, newData);
-    }
-
-    this.applyLog(log);
+      await fs.promises.writeFile(currentFile, data, "utf-8");
+      this.applyLog(log);
+    });
   }
 
   /// @brief Load data from a file
@@ -261,7 +270,7 @@ export class DatabaseManager {
   /// @param metadata: Any metadata to add
   /// @return Promise<number>: The ID of the inserted data
   async insert(data: Omit<DataIndex, "id">, metadata?: any): Promise<number> {
-    const id = this.current_id++;
+    const id = this.nextId();
 
     const new_data: DataIndex = { id, ...data, metadata };
 
@@ -280,7 +289,7 @@ export class DatabaseManager {
     duration: number,
     metadata?: any
   ): Promise<number> {
-    const id = this.current_id++;
+    const id = this.nextId();
     const new_data: DataIndex = { id, ...data, metadata };
 
     await this.log_async({ type: "insert", data: new_data });
@@ -427,6 +436,15 @@ export class DatabaseManager {
     return this.version_controller.listVersions();
   }
 
+  /// @brief Get metadata for a specific version (or current version if none provided)
+  /// @param versionName?: Name of the version (defaults to current)
+  /// @return Promise<Record<string, any>>
+  async getVersionMetadata(versionName?: string): Promise<Record<string, any>> {
+    const version = versionName ?? this.version_name;
+
+    return await this.version_controller.getMetadata(version);
+  }
+
   // ============ UTILITY OPERATIONS ============
 
   /// @brief Bulk apply logs
@@ -436,5 +454,18 @@ export class DatabaseManager {
     for (const log of logs) {
       this.applyLog(log);
     }
+  }
+
+  /// @breif Queues a file write
+  /// @brief fn: The function that does the writing
+  private async queueWrite<T>(fn: () => Promise<T>): Promise<T> {
+    this.write_queue = this.write_queue.then(fn, fn);
+
+    return this.write_queue;
+  }
+
+  /// @brief Return the next ID
+  private nextId(): number {
+    return this.current_id++;
   }
 }

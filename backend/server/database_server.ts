@@ -159,7 +159,9 @@ app.patch("/cancel_temp/:id", async (req: Request, res: Response) => {
 
 // ======= VERSION CONTROL OPERATORS =======
 
-app.post("/versions/create_empty/:name", async (req: Request, res: Response) => {
+app.post(
+  "/versions/create_empty/:name",
+  async (req: Request, res: Response) => {
     try {
       const { name } = req.params;
 
@@ -247,6 +249,24 @@ app.get("/versions", (_: Request, res: Response) => {
   } catch (error) {
     console.error("Error listing versions:", error);
     res.status(500).json({ error: "Failed to list versions" });
+  }
+});
+
+app.get("/versions/metadata/:name?", async (req: Request, res: Response) => {
+  try {
+    const { name } = req.params;
+
+    const metadata = await db_manager!.getVersionMetadata(name);
+
+    res.json({ success: true, metadata });
+  } catch (error) {
+    console.error("Error fetching version metadata:", error);
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch version metadata",
+    });
   }
 });
 

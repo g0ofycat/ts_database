@@ -69,6 +69,7 @@ export class VersionController {
     }
 
     const metadata = {
+      created_from: db.version_name,
       timestamp: new Date().toISOString(),
       totalRecords: allLogs.length,
       chunks: Math.ceil(allLogs.length / chunkSize),
@@ -124,5 +125,20 @@ export class VersionController {
     return fs
       .readdirSync(this.baseDir)
       .filter((f) => fs.statSync(path.join(this.baseDir, f)).isDirectory());
+  }
+
+  /// @brief Get metadata for a given version
+  /// @param version: Name of the version
+  /// @return Promise<Record<string, any>>: Parsed metadata object
+  async getMetadata(version: string): Promise<Record<string, any>> {
+    const metadataPath = path.join(this.baseDir, version, "metadata.json");
+
+    if (!fs.existsSync(metadataPath)) {
+      throw new Error(`Metadata file not found for version "${version}"`);
+    }
+
+    const raw = await fs.promises.readFile(metadataPath, "utf-8");
+
+    return JSON.parse(raw);
   }
 }
