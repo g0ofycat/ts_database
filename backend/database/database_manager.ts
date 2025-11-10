@@ -30,6 +30,14 @@ export class DatabaseManager {
   private file_path: string;
   private version_controller: VersionController;
 
+  private is_loading = false;
+
+  // ============ PRIVATE METHODS ============
+
+  private deepCopy<T>(obj: T): T {
+    return JSON.parse(JSON.stringify(obj));
+  }
+
   // ============ PUBLIC DATA ============
 
   public version_name: string;
@@ -78,57 +86,62 @@ export class DatabaseManager {
   /// @brief Appends certain actions to the file
   /// @param log
   /// @return Promise<void>
-  private async log_async(log: LogRecord): Promise<void> {
-    await this.queueWrite(async () => {
-      const currentFile = await this.getCurrentFile();
-      const logText = JSON.stringify(log, null, 2);
-      const stat = await fs.promises
-        .stat(currentFile)
-        .catch(() => ({ size: 0 }));
-      const isEmpty = stat.size === 0;
+  private async writeLog(log: LogRecord): Promise<void> {
+    const currentFile = await this.getCurrentFile();
 
-      const data = isEmpty
-        ? `[\n${logText}\n]`
-        : (await fs.promises.readFile(currentFile, "utf-8"))
-            .trim()
-            .slice(0, -1) + `,\n${logText}\n]`;
+    const logText = JSON.stringify(log, null, 2);
 
-      await fs.promises.writeFile(currentFile, data, "utf-8");
-      this.applyLog(log);
-    });
+    const stat = await fs.promises.stat(currentFile).catch(() => ({ size: 0 }));
+    const isEmpty = stat.size === 0;
+
+    const data = isEmpty
+      ? `[\n${logText}\n]`
+      : (await fs.promises.readFile(currentFile, "utf-8")).trim().slice(0, -1) +
+        `,\n${logText}\n]`;
+
+    await fs.promises.writeFile(currentFile, data, "utf-8");
   }
 
   /// @brief Load data from a file
   /// @return Promise<void>
   private async load_async(): Promise<void> {
-    const dir = path.dirname(this.file_path);
-    const base = path.basename(this.file_path, ".json");
+    await this.queueWrite(async () => {
+      this.is_loading = true;
 
-    try {
-      await fs.promises.mkdir(dir, { recursive: true });
+      const dir = path.dirname(this.file_path);
+      const base = path.basename(this.file_path, ".json");
 
-      const files = (await fs.promises.readdir(dir)).filter((f) =>
-        f.startsWith(base + "_")
-      );
+      try {
+        await fs.promises.mkdir(dir, { recursive: true });
 
-      for (const file of files) {
-        const file_path = path.join(dir, file);
-        const raw = await fs.promises.readFile(file_path, "utf-8");
+        const files = (await fs.promises.readdir(dir)).filter((f) =>
+          f.startsWith(base + "_")
+        );
 
-        if (!raw.trim()) continue;
+        for (const file of files) {
+          const file_path = path.join(dir, file);
+          const raw = await fs.promises.readFile(file_path, "utf-8");
 
-        try {
-          const logs: LogRecord[] = JSON.parse(raw);
+          if (!raw.trim()) continue;
 
-          await this.applyLogs(logs);
-        } catch (err) {
-          console.error(`Failed to parse file ${file_path}:`, err);
+          try {
+            const logs: LogRecord[] = JSON.parse(raw);
+
+            for (const log of logs) {
+              this.applyLog(log);
+            }
+          } catch (err) {
+            console.error(`Failed to parse file ${file_path}:`, err);
+          }
         }
+      } catch (err) {
+        console.error("Error loading data from file:", err);
+
+        throw err;
+      } finally {
+        this.is_loading = false;
       }
-    } catch (err) {
-      console.error("Error loading data from file:", err);
-      throw err;
-    }
+    });
   }
 
   // ============ PRIVATE API ============
@@ -270,13 +283,19 @@ export class DatabaseManager {
   /// @param metadata: Any metadata to add
   /// @return Promise<number>: The ID of the inserted data
   async insert(data: Omit<DataIndex, "id">, metadata?: any): Promise<number> {
-    const id = this.nextId();
+    if (this.is_loading) {
+      throw new Error("Database is currently loading");
+    }
 
-    const new_data: DataIndex = { id, ...data, metadata };
+    return await this.queueWrite(async () => {
+      const id = this.nextId();
+      const new_data: DataIndex = { id, ...data, metadata };
 
-    await this.log_async({ type: "insert", data: new_data });
+      await this.writeLog({ type: "insert", data: new_data });
+      this.applyLog({ type: "insert", data: new_data });
 
-    return id;
+      return id;
+    });
   }
 
   /// @param Insert temporary data
@@ -289,18 +308,26 @@ export class DatabaseManager {
     duration: number,
     metadata?: any
   ): Promise<number> {
-    const id = this.nextId();
-    const new_data: DataIndex = { id, ...data, metadata };
+    if (this.is_loading) {
+      throw new Error("Database is currently loading");
+    }
 
-    await this.log_async({ type: "insert", data: new_data });
+    return await this.queueWrite(async () => {
+      const id = this.nextId();
+      const new_data: DataIndex = { id, ...data, metadata };
 
-    const timeoutId = setTimeout(async () => {
-      await this.delete(id);
-    }, duration * 1000);
+      await this.writeLog({ type: "insert", data: new_data });
 
-    this.timeout_data.set(id, timeoutId);
+      this.applyLog({ type: "insert", data: new_data });
 
-    return id;
+      const timeoutId = setTimeout(async () => {
+        this.delete(id);
+      }, duration * 1000);
+
+      this.timeout_data.set(id, timeoutId);
+
+      return id;
+    });
   }
 
   /// @brief Cancel the deletion of the temporary data
@@ -326,14 +353,17 @@ export class DatabaseManager {
   /// @param id: The ID of the data
   /// @return DataIndex | null
   get(id: number): DataIndex | null {
-    return this.index.get(id) ?? null;
+    const record = this.index.get(id);
+    return record ? this.deepCopy(record) : null;
   }
 
   /// @brief Filter operator
   /// @param filter?: The filter to apply
   /// @return DataIndex[]: List of indexes that match
   filter(filter?: Partial<DataIndex>): DataIndex[] {
-    if (!filter) return this.storage;
+    if (!filter) {
+      return this.storage.map((record) => this.deepCopy(record));
+    }
 
     const idSets: Set<number>[] = [];
 
@@ -353,7 +383,7 @@ export class DatabaseManager {
       (a, b) => new Set([...a].filter((x) => b.has(x)))
     );
 
-    return [...ids].map((id) => this.index.get(id)!);
+    return [...ids].map((id) => this.deepCopy(this.index.get(id)!));
   }
 
   /// @brief Update operator
@@ -361,42 +391,45 @@ export class DatabaseManager {
   /// @param updates: The updates to the data
   /// @return Promise<boolean>: If the update worked
   async update(id: number, updates: Partial<DataIndex>): Promise<boolean> {
-    const record = this.index.get(id);
+    return await this.queueWrite(async () => {
+      const record = this.index.get(id);
 
-    if (!record) return false;
+      if (!record) return false;
 
-    this.removeIndex(this.data_map, record, ["metadata"]);
+      await this.writeLog({ type: "update", id, changes: updates });
 
-    if (record.metadata)
-      this.removeIndex(this.metadata_map, record.metadata, []);
+      this.applyLog({ type: "update", id, changes: updates });
 
-    Object.assign(record, updates);
-
-    this.indexFields(this.data_map, record, ["metadata"], true);
-
-    if (record.metadata)
-      this.indexFields(this.metadata_map, record.metadata, [], true);
-
-    await this.log_async({ type: "update", id, changes: updates });
-
-    return true;
+      return true;
+    });
   }
 
   /// @brief Delete operator
   /// @param id: The ID of the data
   /// @return Promise<boolean>: If the deletion worked
   async delete(id: number): Promise<boolean> {
-    if (!this.index.has(id)) return false;
+    return await this.queueWrite(async () => {
+      if (!this.index.has(id)) return false;
 
-    await this.log_async({ type: "delete", id });
+      const timeoutId = this.timeout_data.get(id);
 
-    return true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        this.timeout_data.delete(id);
+      }
+
+      await this.writeLog({ type: "delete", id });
+
+      this.applyLog({ type: "delete", id });
+
+      return true;
+    });
   }
 
-  /// @brief Return shallow copy of the current storage
+  /// @brief Return deep copy of the current storage
   /// @return DataIndex[]
   all(): DataIndex[] {
-    return [...this.storage];
+    return this.storage.map((record) => this.deepCopy(record));
   }
 
   // ============ VERSION CONTROL OPERATIONS ============
@@ -405,7 +438,9 @@ export class DatabaseManager {
   /// @param versionName: Name for this empty version
   /// @return Promise<void>
   async createEmptyVersion(versionName: string): Promise<void> {
-    await this.version_controller.createEmptyVersion(versionName);
+    await this.queueWrite(async () => {
+      await this.version_controller.createEmptyVersion(versionName);
+    });
   }
 
   /// @brief Create a snapshot of the current database state
@@ -413,7 +448,9 @@ export class DatabaseManager {
   /// @param chunkSize: Optional chunk size for large databases
   /// @return Promise<void>
   async createVersion(versionName: string, chunkSize = 500): Promise<void> {
-    await this.version_controller.createVersion(this, versionName, chunkSize);
+    await this.queueWrite(async () => {
+      await this.version_controller.createVersion(this, versionName, chunkSize);
+    });
   }
 
   /// @brief Load database to a previous version
