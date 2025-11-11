@@ -11,7 +11,7 @@ dotenv.config();
 
 // ============ database_manager.ts ============
 
-export class DatabaseManager {
+export class DatabaseInstance {
   // ============ PRIVATE DATA ============
 
   private storage: DataIndex[] = [];
@@ -209,6 +209,7 @@ export class DatabaseManager {
       });
 
     const lastFile = files[files.length - 1];
+
     const lastIndex = lastFile
       ? parseInt(lastFile.match(/_(\d+)\.json$/)?.[1] ?? "0")
       : -1;
@@ -217,6 +218,7 @@ export class DatabaseManager {
 
     if (lastIndex === -1) {
       currentFile = path.join(dir, `${base}_0.json`);
+
       await fs.promises.writeFile(currentFile, "");
     } else {
       const lastFilePath = path.join(dir, `${base}_${lastIndex}.json`);
@@ -226,6 +228,7 @@ export class DatabaseManager {
         currentFile = lastFilePath;
       } else {
         currentFile = path.join(dir, `${base}_${lastIndex + 1}.json`);
+
         await fs.promises.writeFile(currentFile, "");
       }
     }
@@ -456,7 +459,7 @@ export class DatabaseManager {
   /// @brief Load database to a previous version
   /// @param versionName: Name of the version to restore
   /// @return Promise<DatabaseManager>: New database instance for this version
-  async loadVersion(versionName: string): Promise<DatabaseManager> {
+  async loadVersion(versionName: string): Promise<DatabaseInstance> {
     return await this.version_controller.loadVersion(versionName);
   }
 

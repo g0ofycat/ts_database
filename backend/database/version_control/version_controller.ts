@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { DatabaseManager } from "../database_manager";
+import { DatabaseInstance } from "../database_instance";
 
 // ============ version_controller.ts ============
 
@@ -47,7 +47,7 @@ export class VersionController {
   /// @param chunkSize: How many lines of data to load for each chunk
   /// @return Promise<void>
   async createVersion(
-    db: DatabaseManager,
+    db: DatabaseInstance,
     version: string,
     chunkSize = 500
   ): Promise<void> {
@@ -85,11 +85,11 @@ export class VersionController {
   /// @brief Loads a version
   /// @param version: The name of the version
   /// @return Promise<Database>: The database
-  async loadVersion(version: string): Promise<DatabaseManager> {
+  async loadVersion(version: string): Promise<DatabaseInstance> {
     const dir = path.join(this.baseDir, version);
     if (!fs.existsSync(dir)) throw new Error("Version does not exist");
 
-    const db = new DatabaseManager(
+    const db = new DatabaseInstance(
       process.env.DATABASE_API_KEY!,
       false,
       version

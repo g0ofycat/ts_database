@@ -1,9 +1,9 @@
 import express, { Request, Response } from "express";
-import { DatabaseManager } from "../database/database_manager";
+import { DatabaseInstance } from "../database/database_instance";
 
 // ============ INIT ============
 
-let db_manager: DatabaseManager | null = null;
+let db_manager: DatabaseInstance | null = null;
 
 const app = express();
 
@@ -19,7 +19,7 @@ app.post("/set_api_key", (req: Request, res: Response) => {
   }
 
   try {
-    db_manager = new DatabaseManager(apiKey);
+    db_manager = new DatabaseInstance(apiKey);
     return res.json({ success: true, message: "API key set successfully" });
   } catch (err) {
     console.error("Failed to initialize database:", err);
