@@ -35,6 +35,19 @@ app.post("/set_api_key", (req, res) => {
   }
 });
 
+/// @brief Ping the server
+/// @param _: The request object
+/// @param res: The response object
+app.get("/ping", (req, res) => {
+  const { apiKey } = req.body;
+
+  if (!apiKey) {
+    return res.status(400).json({ error: "API key is required" });
+  }
+
+  res.json({ success: true, message: "Pong!" });
+});
+
 // ============ SECURITY INIT ============
 
 app.use(requireDatabase);
