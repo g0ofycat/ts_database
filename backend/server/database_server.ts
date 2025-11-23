@@ -8,8 +8,8 @@ import { requireDatabase } from "./routes/middleware/require_database";
 
 import { reloadWebsite, interval_ms } from "./misc/database_pinger";
 
-import dataRoutes from "./routes/data/data_routes";
-import versionRoutes from "./routes/data/version_routes";
+import dataRoutes from "./routes/main/data_routes";
+import versionRoutes from "./routes/main/version_routes";
 
 // ============ INIT ============
 
