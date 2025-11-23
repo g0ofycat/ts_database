@@ -43,7 +43,7 @@ router.post("/create/:name", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Version name is required" });
     }
 
-    await db_manager!.createVersion(name, chunkSize || 500);
+    await db_manager!.createVersion(name, chunkSize);
 
     res.json({
       success: true,

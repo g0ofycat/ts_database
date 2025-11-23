@@ -288,10 +288,14 @@ export class DatabaseInstance {
 
   /// @brief Insert operator
   /// @param data: The data to add
-  /// @param metadata: Any metadata to add
-  /// @param name: The name of the data
+  /// @param metadata?: Any metadata to add
+  /// @param name?: The name of the data
   /// @return Promise<number>: The ID of the inserted data
-  async insert(data: Omit<DataIndex, "id">, metadata?: any, name?: any): Promise<number> {
+  async insert(
+    data: Omit<DataIndex, "id">,
+    metadata?: any,
+    name?: any
+  ): Promise<number> {
     if (this.is_loading) {
       throw new Error("Database is currently loading");
     }
@@ -310,8 +314,8 @@ export class DatabaseInstance {
   /// @param Insert temporary data
   /// @param data: The data to add
   /// @param duration: How long the data will last (seconds)
-  /// @param metadata: Any metadata to add
-  /// @param name: The name of the data
+  /// @param metadata?: Any metadata to add
+  /// @param name?: The name of the data
   /// @return Promise<number>: The ID of the temporary data
   async insert_temp(
     data: Omit<DataIndex, "id">,
@@ -379,9 +383,18 @@ export class DatabaseInstance {
     const idSets: Set<number>[] = [];
 
     for (const [key, value] of Object.entries(filter)) {
-      let map = key === "metadata" ? this.metadata_map : this.data_map;
+      if (key === "metadata") {
+        for (const [mKey, mValue] of Object.entries(value as any)) {
+          const valueMap = this.metadata_map.get(mKey);
 
-      const valueMap = map.get(key);
+          if (!valueMap || !valueMap.has(mValue)) return [];
+
+          idSets.push(valueMap.get(mValue)!);
+        }
+        continue;
+      }
+
+      const valueMap = this.data_map.get(key);
 
       if (!valueMap || !valueMap.has(value)) return [];
 
@@ -463,9 +476,9 @@ export class DatabaseInstance {
 
   /// @brief Create a snapshot of the current database state
   /// @param versionName: Name for this version
-  /// @param chunkSize: Optional chunk size for large databases
+  /// @param chunkSize?: Optional chunk size for large databases
   /// @return Promise<void>
-  async createVersion(versionName: string, chunkSize = 500): Promise<void> {
+  async createVersion(versionName: string, chunkSize?: number): Promise<void> {
     await this.queueWrite(async () => {
       await this.version_controller.createVersion(this, versionName, chunkSize);
     });
