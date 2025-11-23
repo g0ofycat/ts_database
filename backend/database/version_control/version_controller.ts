@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+
 import { DatabaseInstance } from "../database_instance";
 
 // ============ version_controller.ts ============
@@ -82,13 +83,10 @@ export class VersionController {
     );
   }
 
-  /// @brief Loads a version
+  /// @brief Loads a version (creates a new Database if it doesn't exist)
   /// @param version: The name of the version
   /// @return Promise<Database>: The database
   async loadVersion(version: string): Promise<DatabaseInstance> {
-    const dir = path.join(this.baseDir, version);
-    if (!fs.existsSync(dir)) throw new Error("Version does not exist");
-
     const db = new DatabaseInstance(
       process.env.DATABASE_API_KEY!,
       false,

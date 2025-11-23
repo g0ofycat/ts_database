@@ -32,6 +32,7 @@ export class DatabaseInstance {
 
   private is_loading = false;
 
+  private api_key: string;
   // ============ PRIVATE METHODS ============
 
   private deepCopy<T>(obj: T): T {
@@ -68,6 +69,8 @@ export class DatabaseInstance {
         "database_data.json"
       )
     );
+
+    this.api_key = api_key;
 
     this.version_name = version_name;
 
@@ -433,6 +436,13 @@ export class DatabaseInstance {
   /// @return DataIndex[]
   all(): DataIndex[] {
     return this.storage.map((record) => this.deepCopy(record));
+  }
+
+  /// @brief Check if the provided API key is valid
+  /// @param key: The API key to check
+  /// @return boolean: True if valid, false otherwise
+  isValidKey(key: string) {
+    return key === this.api_key;
   }
 
   // ============ VERSION CONTROL OPERATIONS ============
