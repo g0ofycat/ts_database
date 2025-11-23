@@ -17,7 +17,7 @@ export const interval_ms = 30000;
 
 /// @brief Ping server every interval_ms
 export function reloadWebsite() {
-  axios.get(url, { headers: { "api-key": process.env.API_KEY } })
+  axios.get(url, { headers: { "api-key": process.env.DATABASE_API_KEY } })
     .then(response => {
       console.log(`Reloaded at ${new Date().toISOString()}: Status Code ${response.status}`);
     })
