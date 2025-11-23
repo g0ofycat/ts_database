@@ -134,4 +134,33 @@ router.get("/metadata/:name?", async (req: Request, res: Response) => {
   }
 });
 
+/// @brief Download JSON data for the current version
+/// @param req: The request object containing the optional version name in the URL
+/// @param res: The response object to send the JSON data as a file download
+router.get("/download/:name?", async (req: Request, res: Response) => {
+  try {
+    const versionName = req.params.name ?? db_manager!.version_name;
+
+    let dbInstance = db_manager!;
+
+    if (versionName !== db_manager!.version_name) {
+      dbInstance = await db_manager!.loadVersion(versionName);
+    }
+
+    const data = dbInstance.all();
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${versionName}.json"`
+    );
+
+    res.setHeader("Content-Type", "application/json");
+
+    res.send(JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error("Error downloading version data:", err);
+    res.status(500).json({ error: "Failed to download version data" });
+  }
+});
+
 export default router;
