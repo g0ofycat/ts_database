@@ -1,7 +1,7 @@
 import express from "express";
 
 import { DatabaseInstance } from "../database/database_instance";
-import { setDbManager } from "./shared_database";
+import { db_manager, setDbManager } from "./shared_database";
 
 import { requireAPIKey } from "./routes/middleware/require_API_key";
 import { requireDatabase } from "./routes/middleware/require_database";
@@ -38,11 +38,11 @@ app.post("/set_api_key", (req, res) => {
 /// @brief Ping the server
 /// @param _: The request object
 /// @param res: The response object
-app.get("/ping", (req, res) => {
+app.post("/ping", (req, res) => {
   const { apiKey } = req.body;
 
-  if (!apiKey) {
-    return res.status(400).json({ error: "API key is required" });
+  if (!db_manager?.isValidKey(apiKey.toString())) {
+    return res.status(401).json({ error: "Invalid API key" });
   }
 
   res.json({ success: true, message: "Pong!" });
