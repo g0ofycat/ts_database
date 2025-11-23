@@ -372,7 +372,7 @@ export class DatabaseInstance {
     return record ? this.deepCopy(record) : null;
   }
 
-  /// @brief Filter operator
+  /// @brief Filter operator - FIXED
   /// @param filter?: The filter to apply
   /// @return DataIndex[]: List of indexes that match
   filter(filter?: Partial<DataIndex>): DataIndex[] {
@@ -388,24 +388,29 @@ export class DatabaseInstance {
 
         for (const [mKey, raw] of Object.entries(meta)) {
           const valueMap = this.metadata_map.get(mKey);
+
           if (!valueMap) return [];
 
-          const mValue = typeof raw === "string" && !isNaN(+raw) ? +raw : raw;
+          const sets = [
+            valueMap.get(raw),
+            valueMap.get(+raw),
+            valueMap.get(String(raw)),
+          ].filter(Boolean);
 
-          if (!valueMap.has(mValue)) return [];
+          if (sets.length === 0) return [];
 
-          const set = valueMap.get(mValue);
-          if (!set) return [];
+          const set =
+            sets.length === 1 ? sets[0] : new Set(sets.flatMap((s) => [...s!]));
 
-          idSets.push(set);
+          idSets.push(set!);
         }
 
         continue;
       }
 
       const valueMap = this.data_map.get(key);
-      if (!valueMap) return [];
 
+      if (!valueMap) return [];
       if (!valueMap.has(value)) return [];
 
       const set = valueMap.get(value);
