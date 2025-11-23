@@ -289,15 +289,16 @@ export class DatabaseInstance {
   /// @brief Insert operator
   /// @param data: The data to add
   /// @param metadata: Any metadata to add
+  /// @param name: The name of the data
   /// @return Promise<number>: The ID of the inserted data
-  async insert(data: Omit<DataIndex, "id">, metadata?: any): Promise<number> {
+  async insert(data: Omit<DataIndex, "id">, metadata?: any, name?: any): Promise<number> {
     if (this.is_loading) {
       throw new Error("Database is currently loading");
     }
 
     return await this.queueWrite(async () => {
       const id = this.nextId();
-      const new_data: DataIndex = { id, ...data, metadata };
+      const new_data: DataIndex = { name, id, ...data, metadata };
 
       await this.writeLog({ type: "insert", data: new_data });
       this.applyLog({ type: "insert", data: new_data });
@@ -310,11 +311,13 @@ export class DatabaseInstance {
   /// @param data: The data to add
   /// @param duration: How long the data will last (seconds)
   /// @param metadata: Any metadata to add
+  /// @param name: The name of the data
   /// @return Promise<number>: The ID of the temporary data
   async insert_temp(
     data: Omit<DataIndex, "id">,
     duration: number,
-    metadata?: any
+    metadata?: any,
+    name?: any
   ): Promise<number> {
     if (this.is_loading) {
       throw new Error("Database is currently loading");
@@ -322,7 +325,7 @@ export class DatabaseInstance {
 
     return await this.queueWrite(async () => {
       const id = this.nextId();
-      const new_data: DataIndex = { id, ...data, metadata };
+      const new_data: DataIndex = { name, id, ...data, metadata };
 
       await this.writeLog({ type: "insert", data: new_data });
 

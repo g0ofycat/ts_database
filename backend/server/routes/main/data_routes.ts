@@ -14,7 +14,8 @@ const router = Router();
 /// @param res: The response object to send the ID of the inserted record
 router.post("/insert", validateData, async (req: Request, res: Response) => {
   try {
-    const id = await db_manager!.insert(req.body, req.body.metadata);
+    const { metadata, name, ...data } = req.body;
+    const id = await db_manager!.insert(data, metadata, name);
 
     res.json({ id });
   } catch (error) {
@@ -31,11 +32,8 @@ router.post(
   validateData,
   async (req: Request, res: Response) => {
     try {
-      const id = await db_manager!.insert_temp(
-        req.body,
-        req.body.timeout,
-        req.body.metadata
-      );
+      const { metadata, name, timeout, ...data } = req.body;
+      const id = await db_manager!.insert_temp(data, timeout, metadata, name);
 
       res.json({ id });
     } catch (error) {
