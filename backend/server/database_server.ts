@@ -1,7 +1,8 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 
 import { DatabaseInstance } from "../database/database_instance";
-import { db_manager, setDbManager } from "./shared_database";
+import { setDbManager } from "./shared_database";
 
 import { requireAPIKey } from "./routes/middleware/require_API_key";
 import { requireDatabase } from "./routes/middleware/require_database";
@@ -10,6 +11,12 @@ import dataRoutes from "./routes/main/data_routes";
 import versionRoutes from "./routes/main/version_routes";
 
 // ============ INIT ============
+
+const pingLimiter = rateLimit({
+  windowMs: 10 * 1000,
+  max: 5,
+  message: { error: "Too many requests" }
+});
 
 const app = express();
 
@@ -38,13 +45,7 @@ app.post("/set_api_key", (req, res) => {
 /// @brief Ping the server
 /// @param _: The request object
 /// @param res: The response object
-app.post("/ping", (req, res) => {
-  const { apiKey } = req.body;
-
-  if (!db_manager?.isValidKey(apiKey.toString())) {
-    return res.status(401).json({ error: "Invalid API key" });
-  }
-
+app.post("/ping", pingLimiter, (_, res) => {
   res.json({ success: true, message: "Pong!" });
 });
 
