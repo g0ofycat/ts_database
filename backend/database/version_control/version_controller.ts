@@ -87,13 +87,13 @@ export class VersionController {
   /// @param version: The name of the version
   /// @return Promise<Database>: The database
   async loadVersion(version: string): Promise<DatabaseInstance> {
-    const db = new DatabaseInstance(
-      process.env.DATABASE_API_KEY!,
-      false,
-      version
-    );
+    const dir = path.join(this.baseDir, version);
 
-    return db;
+    if (!fs.existsSync(dir)) {
+      await this.createEmptyVersion(version);
+    }
+
+    return new DatabaseInstance(process.env.DATABASE_API_KEY!, false, version);
   }
 
   /// @brief Delete a version
