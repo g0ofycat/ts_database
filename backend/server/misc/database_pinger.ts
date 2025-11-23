@@ -1,4 +1,9 @@
 import axios from "axios";
+import dotenv from "dotenv";
+
+// ============ INIT ============
+
+dotenv.config();
 
 // ============ PRIVATE CONSTS ============
 
@@ -12,7 +17,7 @@ export const interval_ms = 30000;
 
 /// @brief Ping server every interval_ms
 export function reloadWebsite() {
-  axios.get(url)
+  axios.get(url, { headers: { "api-key": process.env.API_KEY } })
     .then(response => {
       console.log(`Reloaded at ${new Date().toISOString()}: Status Code ${response.status}`);
     })

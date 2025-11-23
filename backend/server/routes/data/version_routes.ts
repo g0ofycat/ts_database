@@ -59,7 +59,7 @@ router.delete("/delete/:name", async (req: Request, res: Response) => {
 /// @brief Get a list of all versions
 /// @param req: The request object
 /// @param res: The response object to send the list of versions
-router.get("/versions", (_: Request, res: Response) => {
+router.get("/all", (_: Request, res: Response) => {
   res.json({ versions: db_manager!.listVersions() });
 });
 
