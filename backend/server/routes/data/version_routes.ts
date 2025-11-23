@@ -66,7 +66,7 @@ router.post("/load/:name", async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      message: `Database loaded and switched to version "${name}"`,
+      message: `Database loaded and switched to version "${version_name}"`,
     });
   } catch (error) {
     console.error("Error loading version:", error);
