@@ -384,30 +384,50 @@ export class DatabaseInstance {
 
     for (const [key, value] of Object.entries(filter)) {
       if (key === "metadata") {
-        for (const [mKey, mValue] of Object.entries(value as any)) {
+        const meta = value as Record<string, any>;
+
+        for (const [mKey, raw] of Object.entries(meta)) {
           const valueMap = this.metadata_map.get(mKey);
+          if (!valueMap) return [];
 
-          if (!valueMap || !valueMap.has(mValue)) return [];
+          const mValue = typeof raw === "string" && !isNaN(+raw) ? +raw : raw;
 
-          idSets.push(valueMap.get(mValue)!);
+          if (!valueMap.has(mValue)) return [];
+
+          const set = valueMap.get(mValue);
+          if (!set) return [];
+
+          idSets.push(set);
         }
+
         continue;
       }
 
       const valueMap = this.data_map.get(key);
+      if (!valueMap) return [];
 
-      if (!valueMap || !valueMap.has(value)) return [];
+      if (!valueMap.has(value)) return [];
 
-      idSets.push(valueMap.get(value)!);
+      const set = valueMap.get(value);
+      if (!set) return [];
+
+      idSets.push(set);
     }
 
     if (idSets.length === 0) return [];
 
-    const ids = idSets.reduce(
-      (a, b) => new Set([...a].filter((x) => b.has(x)))
-    );
+    const ids =
+      idSets.length === 1
+        ? idSets[0]
+        : idSets.reduce((a, b) => new Set([...a].filter((x) => b.has(x))));
 
-    return [...ids].map((id) => this.deepCopy(this.index.get(id)!));
+    return [...ids!]
+      .map((id) => {
+        const rec = this.index.get(id);
+        if (!rec) return null;
+        return this.deepCopy(rec);
+      })
+      .filter(Boolean) as DataIndex[];
   }
 
   /// @brief Update operator
