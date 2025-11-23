@@ -1,15 +1,15 @@
 import express from "express";
 
-import { DatabaseInstance } from "../../database/database_instance";
+import { DatabaseInstance } from "../database/database_instance";
 import { setDbManager } from "./shared_database";
 
-import { requireAPIKey } from "./middleware/require_API_key";
-import { requireDatabase } from "./middleware/require_database";
+import { requireAPIKey } from "./routes/middleware/require_API_key";
+import { requireDatabase } from "./routes/middleware/require_database";
 
-import { reloadWebsite, interval_ms } from "../misc/database_pinger";
+import { reloadWebsite, interval_ms } from "./misc/database_pinger";
 
-import dataRoutes from "./data/data_routes";
-import versionRoutes from "./data/version_routes";
+import dataRoutes from "./routes/data/data_routes";
+import versionRoutes from "./routes/data/version_routes";
 
 // ============ INIT ============
 

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 
-import { db_manager } from "../shared_database";
+import { db_manager } from "../../shared_database";
 import { validateData } from "../middleware/validate_data";
 
 // ============ CONSTS ============

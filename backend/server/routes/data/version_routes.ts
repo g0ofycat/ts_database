@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 
-import { db_manager, setDbManager } from "../shared_database";
+import { db_manager, setDbManager } from "../../shared_database";
 
 // ============ CONSTS ============
 

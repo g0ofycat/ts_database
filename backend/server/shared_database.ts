@@ -1,4 +1,4 @@
-import { DatabaseInstance } from "../../database/database_instance";
+import { DatabaseInstance } from "../database/database_instance";
 
 // ============ PUBLIC VARIABLES ============
 
