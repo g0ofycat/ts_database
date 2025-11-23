@@ -23,8 +23,20 @@ setInterval(reloadWebsite, interval_ms);
 
 app.post("/set_api_key", (req, res) => {
   const { apiKey } = req.body;
-  setDbManager(new DatabaseInstance(apiKey));
-  res.json({ success: true });
+
+  if (!apiKey) {
+    return res.status(400).json({ error: "API key is required" });
+  }
+
+  try {
+    setDbManager(new DatabaseInstance(apiKey));
+
+    return res.json({ success: true, message: "API key set successfully" });
+  } catch (err) {
+    console.error("Failed to initialize database:", err);
+
+    return res.status(401).json({ error: "Invalid API key" });
+  }
 });
 
 // ============ SECURITY INIT ============

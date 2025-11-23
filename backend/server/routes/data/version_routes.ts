@@ -12,63 +12,126 @@ const router = Router();
 /// @param req: The request object containing the name in the URL
 /// @param res: The response object to send the success status
 router.post("/create_empty/:name", async (req: Request, res: Response) => {
-  const version_name = req.params.name;
+  try {
+    const { name } = req.params;
 
-  await db_manager!.createEmptyVersion(version_name!);
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ error: "Version name is required" });
+    }
 
-  res.json({ success: true });
+    await db_manager!.createEmptyVersion(name);
+
+    res.json({
+      success: true,
+      message: `Empty version "${name}" created successfully`,
+    });
+  } catch (error) {
+    console.error("Error creating empty version:", error);
+    res.status(500).json({ error: "Failed to create empty version" });
+  }
 });
 
 /// @brief Create a new version with the given name and chunk size
 /// @param req: The request object containing the name in the URL and chunk size in the body
 /// @param res: The response object to send the success status
 router.post("/create/:name", async (req: Request, res: Response) => {
-  const { chunkSize } = req.body;
+  try {
+    const { name } = req.params;
+    const { chunkSize } = req.body;
 
-  const version_name = req.params.name;
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ error: "Version name is required" });
+    }
 
-  await db_manager!.createVersion(version_name!, chunkSize);
+    await db_manager!.createVersion(name, chunkSize || 500);
 
-  res.json({ success: true });
+    res.json({
+      success: true,
+      message: `Version "${name}" created successfully`,
+    });
+  } catch (error) {
+    console.error("Error creating version:", error);
+    res.status(500).json({ error: "Failed to create version" });
+  }
 });
 
 /// @brief Load a version by name
 /// @param req: The request object containing the name in the URL
 /// @param res: The response object to send the success status
 router.post("/load/:name", async (req: Request, res: Response) => {
-  const version_name = req.params.name;
+  try {
+    const version_name = req.params.name;
 
-  setDbManager(await db_manager!.loadVersion(version_name!));
+    setDbManager(await db_manager!.loadVersion(version_name!));
 
-  res.json({ success: true });
+    res.json({
+      success: true,
+      message: `Database loaded and switched to version "${name}"`,
+    });
+  } catch (error) {
+    console.error("Error loading version:", error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Failed to load version",
+    });
+  }
 });
 
 /// @brief Delete a version by name
 /// @param req: The request object containing the name in the URL
 /// @param res: The response object to send the success status
 router.delete("/delete/:name", async (req: Request, res: Response) => {
-  const version_name = req.params.name;
+  try {
+    const { name } = req.params;
 
-  const success = await db_manager!.deleteVersion(version_name!);
+    const success = await db_manager!.deleteVersion(name!);
 
-  if (!success) return res.status(404).json({ error: "Version not found" });
-
-  res.json({ success: true });
+    if (success) {
+      res.json({
+        success: true,
+        message: `Version "${name}" deleted successfully`,
+      });
+    } else {
+      res.status(404).json({ error: "Version not found" });
+    }
+  } catch (error) {
+    console.error("Error deleting version:", error);
+    res.status(500).json({ error: "Failed to delete version" });
+  }
 });
 
 /// @brief Get a list of all versions
 /// @param req: The request object
 /// @param res: The response object to send the list of versions
 router.get("/all", (_: Request, res: Response) => {
-  res.json({ versions: db_manager!.listVersions() });
+  try {
+    const versions = db_manager!.listVersions();
+
+    res.json({ versions });
+  } catch (error) {
+    console.error("Error listing versions:", error);
+    res.status(500).json({ error: "Failed to list versions" });
+  }
 });
 
 /// @brief Get metadata for a given version
 /// @param req: The request object containing the name in the URL
 /// @param res: The response object to send the metadata
 router.get("/metadata/:name?", async (req: Request, res: Response) => {
-  const metadata = await db_manager!.getVersionMetadata(req.params.name);
-  res.json({ success: true, metadata });
+  try {
+    const { name } = req.params;
+
+    const metadata = await db_manager!.getVersionMetadata(name);
+
+    res.json({ success: true, metadata });
+  } catch (error) {
+    console.error("Error fetching version metadata:", error);
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch version metadata",
+    });
+  }
 });
 
 export default router;

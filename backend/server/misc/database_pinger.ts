@@ -17,11 +17,19 @@ export const interval_ms = 30000;
 
 /// @brief Ping server every interval_ms
 export function reloadWebsite() {
-  axios.get(url, { headers: { "api-key": process.env.DATABASE_API_KEY } })
-    .then(response => {
-      console.log(`Reloaded at ${new Date().toISOString()}: Status Code ${response.status}`);
+  axios
+    .get(url, { headers: { "api-key": process.env.DATABASE_API_KEY } })
+    .then((response) => {
+      console.log(
+        `Reloaded at ${new Date().toISOString()}: Status Code ${
+          response.status
+        }`
+      );
     })
-    .catch(error => {
-      console.error(`Error reloading at ${new Date().toISOString()}:`, error.message);
+    .catch((error) => {
+      console.error(
+        `Error reloading at ${new Date().toISOString()}:`,
+        error.message
+      );
     });
 }
