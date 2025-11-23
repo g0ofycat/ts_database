@@ -21,6 +21,8 @@ const app = express();
 
 app.use(express.json());
 
+app.set("trust proxy", 1);
+
 // ============ API KEY INIT ============
 
 /// @brief Set the API key for the database connection
