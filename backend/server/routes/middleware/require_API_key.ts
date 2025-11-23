@@ -13,6 +13,8 @@ export const requireAPIKey = (req: Request, res: Response, next: () => void) => 
 
   const clientKey = req.headers["api-key"];
 
+  console.log(`Received request for ${req.path} with API key: ${clientKey}`
+  );
   if (!clientKey) return res.status(401).json({ error: "Missing API key" });
 
   if (!db_manager) return res.status(403).json({ error: "API key not set" });
