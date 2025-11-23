@@ -6,6 +6,8 @@ import { setDbManager } from "./shared_database";
 import { requireAPIKey } from "./middleware/require_API_key";
 import { requireDatabase } from "./middleware/require_database";
 
+import { reloadWebsite, interval_ms } from "../misc/database_pinger";
+
 import dataRoutes from "./data/data_routes";
 import versionRoutes from "./data/version_routes";
 
@@ -14,6 +16,8 @@ import versionRoutes from "./data/version_routes";
 const app = express();
 
 app.use(express.json());
+
+setInterval(reloadWebsite, interval_ms);
 
 // ============ API KEY INIT ============
 

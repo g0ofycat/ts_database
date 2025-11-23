@@ -1,15 +1,17 @@
 import axios from "axios";
 
-// ============ CONSTS ============
+// ============ PRIVATE CONSTS ============
 
 const url = `https://ts-database.onrender.com`;
 
-const interval_ms = 30000;
+// ============ PUBLIC CONSTS ============
+
+export const interval_ms = 30000;
 
 // ============ INIT ============
 
 /// @brief Ping server every interval_ms
-function reloadWebsite() {
+export function reloadWebsite() {
   axios.get(url)
     .then(response => {
       console.log(`Reloaded at ${new Date().toISOString()}: Status Code ${response.status}`);
@@ -18,5 +20,3 @@ function reloadWebsite() {
       console.error(`Error reloading at ${new Date().toISOString()}:`, error.message);
     });
 }
-
-setInterval(reloadWebsite, interval_ms);
