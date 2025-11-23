@@ -13,7 +13,7 @@ import versionRoutes from "./routes/main/version_routes";
 // ============ INIT ============
 
 const pingLimiter = rateLimit({
-  windowMs: 10 * 6000,
+  windowMs: 60000,
   message: { error: "Too many ping requests" },
 });
 
@@ -23,6 +23,9 @@ app.use(express.json());
 
 // ============ API KEY INIT ============
 
+/// @brief Set the API key for the database connection
+// @param req: The request object containing the API key
+// @param res: The response object
 app.post("/set_api_key", (req, res) => {
   const { apiKey } = req.body;
 
