@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 
 import { DatabaseInstance } from "../database_instance";
-import { DataIndex } from "../types/database_types";
 
 // ============ version_controller.ts ============
 
@@ -107,39 +106,13 @@ export class VersionController {
 
     try {
       await fs.promises.rm(dir, { recursive: true, force: true });
+
       return true;
     } catch (error) {
       console.error(`Failed to delete version "${version}":`, error);
+
       return false;
     }
-  }
-
-  /// @brief Import a version from a folder containing JSON files
-  /// @param versionName: Name of the version to create/override
-  /// @param folderPath: Path to the folder with JSON files
-  async importVersion(versionName: string, folderPath: string) {
-    const files = (await fs.promises.readdir(folderPath)).filter((f) =>
-      f.endsWith(".json")
-    );
-
-    if (!files.length) throw new Error("No JSON files found in folder");
-
-    await this.deleteVersion(versionName);
-    await this.createEmptyVersion(versionName);
-
-    const versionDB = await this.loadVersion(versionName);
-
-    for (const fileName of files) {
-      const filePath = path.join(folderPath, fileName);
-      const content = await fs.promises.readFile(filePath, "utf-8");
-      const records: DataIndex[] = JSON.parse(content);
-
-      for (const record of records) {
-        await versionDB.insert(record, record.metadata);
-      }
-    }
-
-    return files.length;
   }
 
   // ============ UTILITY OPERATIONS ============
