@@ -163,4 +163,25 @@ router.get("/download/:name?", async (req: Request, res: Response) => {
   }
 });
 
+/// @brief Import a version from a folder containing JSON files
+/// @param req: The request object containing the version name in the URL and the folder path in the body
+/// @param res: The response object to send the success status
+router.post("/import_version/:name", async (req: Request, res: Response) => {
+  try {
+    const versionName = req.params.name;
+    const folderPath = req.body.folderPath;
+
+    if (!versionName) return res.status(400).json({ error: "Version name is required" });
+    if (!folderPath) return res.status(400).json({ error: "folderPath is required" });
+
+    const filesProcessed = await db_manager?.version_controller.importVersion(versionName, folderPath);
+
+    res.json({ success: true, message: `Version "${versionName}" imported successfully`, filesProcessed });
+  } catch (err) {
+    console.error("Error importing version from folder:", err);
+    res.status(500).json({ error: "Failed to import version" });
+  }
+});
+
+
 export default router;

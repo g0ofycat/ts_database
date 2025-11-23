@@ -28,11 +28,11 @@ export class DatabaseInstance {
   private file_size_limit = 0;
 
   private file_path: string;
-  private version_controller: VersionController;
 
   private is_loading = false;
 
   private api_key: string;
+
   // ============ PRIVATE METHODS ============
 
   private deepCopy<T>(obj: T): T {
@@ -42,6 +42,8 @@ export class DatabaseInstance {
   // ============ PUBLIC DATA ============
 
   public version_name: string;
+
+  public version_controller: VersionController;
 
   // ============ CONSTRUCTOR ============
 
