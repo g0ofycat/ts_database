@@ -8,7 +8,11 @@ import { db_manager } from "../../shared_database";
 /// @param req: The request object
 /// @param res: The response object
 /// @param next: The next middleware function
-export const requireDatabase = (req: Request, res: Response, next: () => void) => {
+export const requireDatabase = (
+  req: Request,
+  res: Response,
+  next: () => void
+) => {
   if (!db_manager && req.path !== "/set_api_key") {
     return res.status(403).json({ error: "API key not set" });
   }
