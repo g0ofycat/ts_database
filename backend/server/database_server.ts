@@ -13,9 +13,8 @@ import versionRoutes from "./routes/main/version_routes";
 // ============ INIT ============
 
 const pingLimiter = rateLimit({
-  windowMs: 10 * 1000,
-  max: 5,
-  message: { error: "Too many requests" }
+  windowMs: 10 * 6000,
+  message: { error: "Too many ping requests" },
 });
 
 const app = express();
@@ -45,7 +44,7 @@ app.post("/set_api_key", (req, res) => {
 /// @brief Ping the server
 /// @param _: The request object
 /// @param res: The response object
-app.post("/ping", pingLimiter, (_, res) => {
+app.get("/ping", pingLimiter, (_, res) => {
   res.json({ success: true, message: "Pong!" });
 });
 
