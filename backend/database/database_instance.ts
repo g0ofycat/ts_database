@@ -372,7 +372,7 @@ export class DatabaseInstance {
     return record ? this.deepCopy(record) : null;
   }
 
-  /// @brief Filter operator - FIXED
+  /// @brief Filter operator
   /// @param filter?: The filter to apply
   /// @return DataIndex[]: List of indexes that match
   filter(filter?: Partial<DataIndex>): DataIndex[] {
