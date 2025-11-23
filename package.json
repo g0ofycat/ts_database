@@ -2,7 +2,7 @@
   "scripts": {
     "build": "tsc",
     "postinstall": "yarn build",
-    "start": "node dist/backend/server/database_server.js"
+    "start": "node dist/backend/server/routes/database_server.js"
   },
   "dependencies": {
     "axios": "^1.13.2",
