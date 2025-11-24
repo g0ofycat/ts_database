@@ -20,8 +20,8 @@ app.set("trust proxy", 1);
 // ============ API KEY INIT ============
 
 /// @brief Set the API key for the database connection
-// @param req: The request object containing the API key
-// @param res: The response object
+/// @param req: The request object containing the API key
+/// @param res: The response object
 app.post("/set_api_key", (req, res) => {
   const { apiKey } = req.body;
 
