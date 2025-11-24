@@ -1,5 +1,4 @@
 import express from "express";
-import rateLimit from "express-rate-limit";
 
 import { DatabaseInstance } from "../database/database_instance";
 import { setDbManager } from "./shared_database";
@@ -11,11 +10,6 @@ import dataRoutes from "./routes/main/data_routes";
 import versionRoutes from "./routes/main/version_routes";
 
 // ============ INIT ============
-
-const pingLimiter = rateLimit({
-  windowMs: 60000,
-  message: { error: "Too many ping requests" },
-});
 
 const app = express();
 
@@ -49,7 +43,7 @@ app.post("/set_api_key", (req, res) => {
 /// @brief Ping the server
 /// @param _: The request object
 /// @param res: The response object
-app.get("/ping", pingLimiter, (_, res) => {
+app.get("/ping", (_, res) => {
   res.json({ success: true, message: "Pong!" });
 });
 
