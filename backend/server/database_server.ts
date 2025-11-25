@@ -17,6 +17,10 @@ app.use(express.json());
 
 app.set("trust proxy", 1);
 
+app.use(express.json({ limit: '1gb' }));
+
+app.use(express.urlencoded({ limit: '1gb', extended: true }));
+
 // ============ API KEY INIT ============
 
 /// @brief Set the API key for the database connection
