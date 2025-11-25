@@ -13,8 +13,6 @@ import versionRoutes from "./routes/main/version_routes";
 
 const app = express();
 
-app.use(express.json());
-
 app.set("trust proxy", 1);
 
 app.use(express.json({ limit: '1gb' }));
